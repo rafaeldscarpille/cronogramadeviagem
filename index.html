@@ -219,6 +219,14 @@
   .suggest-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
   .suggest-row:last-child{border-bottom:none;}
   .suggest-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:18px 0 4px;}
+  #suggestionsBody .suggest-label:first-child{margin-top:0;}
+  .suggestion-row{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid var(--line);}
+  .suggestion-row:last-child{border-bottom:none;}
+  .suggestion-main{flex:1; min-width:0;}
+  .suggestion-name{font-weight:600; font-size:14px; color:var(--ink);}
+  .suggestion-meta{font-size:12px; color:var(--muted); margin-top:3px;}
+  .suggestion-tips{font-size:12.5px; color:#5b5d56; margin-top:4px; line-height:1.45;}
+  .suggestion-row .btn{flex-shrink:0; margin-top:2px;}
 
   /* ===== Modals ===== */
   .overlay{position:fixed; inset:0; background:rgba(15,17,15,.5); display:flex; align-items:center; justify-content:center; padding:18px; z-index:200;}
@@ -293,6 +301,7 @@
           <div class="hero-pills">
             <a class="pill-btn" href="#calendarSection">Calendário</a>
             <a class="pill-btn" href="#activitiesSection">Atividades</a>
+            <a class="pill-btn" href="#suggestionsSection">Sugestões</a>
             <a class="pill-btn" href="#vehicleSection">Veículo</a>
             <a class="pill-btn" href="#expensesSection">Gastos</a>
             <a class="pill-btn" href="#tipsSection">Dicas</a>
@@ -338,6 +347,14 @@
           <button class="btn btn-accent btn-sm" id="addActivityBtn">Adicionar atividade</button>
         </div>
         <div class="card-body" id="activitiesList"><p class="no-tickets">Nenhuma atividade cadastrada ainda.</p></div>
+      </div>
+
+      <div class="card" id="suggestionsSection">
+        <div class="card-head">
+          <h2>Sugestões para o destino</h2>
+          <button class="text-btn" id="refreshSuggestionsBtn">Atualizar</button>
+        </div>
+        <div class="card-body" id="suggestionsBody"><p class="no-tickets">Buscando sugestões...</p></div>
       </div>
 
       <div class="card" id="vehicleSection">
@@ -722,6 +739,7 @@ service cloud.firestore {
     ensureDestinationIdeas(t);
     startLocalClock(t);
     ensureWeather(t);
+    ensureSuggestions(t);
   }
 
   let editingTripId = null;
@@ -1098,6 +1116,174 @@ service cloud.firestore {
   }
 
   /* ============================================================
+     SUGGESTIONS: curated library (attractions/restaurants) +
+     best-effort automatic lookup for any other destination
+  ============================================================ */
+  const suggestionsFetchInFlight = new Set();
+
+  const CURATED_SUGGESTIONS = {
+    gramado: [
+      { name:'Lago Negro', category:'atracao', type:'Natureza', priceLabel:'Gratuito', priceMin:0, priceMax:0, schedule:'Aberto o dia todo', duration:'1-2h', tips:'Pedalinho, caminhada - lindo ao entardecer' },
+      { name:'Cascata do Caracol', category:'atracao', type:'Natureza', priceLabel:'R$ 30-40', priceMin:30, priceMax:40, schedule:'Aberto o dia todo', duration:'1-2h', tips:'Cachoeira, mirante, trilha na mata' },
+      { name:'Parque do Caracol (Canela)', category:'atracao', type:'Natureza', priceLabel:'R$ 30-50', priceMin:30, priceMax:50, schedule:'Seg-Qui 9h-18h30', duration:'2-3h', tips:'Cachoeira, trilhas, teleférico - vista incrível' },
+      { name:'Praça das Etnias', category:'atracao', type:'Centro', priceLabel:'Gratuito', priceMin:0, priceMax:0, schedule:'Aberto o dia todo', duration:'1-2h', tips:'Cucas, pães, arquitetura típica europeia' },
+      { name:'Snowland', category:'atracao', type:'Parque', priceLabel:'R$ 100-150', priceMin:100, priceMax:150, schedule:'Verificar', duration:'3-4h', tips:'Neve artificial, patinação - reservar online!' },
+      { name:'Acquamotion', category:'atracao', type:'Parque', priceLabel:'R$ 80-120', priceMin:80, priceMax:120, schedule:'Verificar', duration:'3-4h', tips:'Piscinas termais, água quente' },
+      { name:'Terra Mágica Florybal', category:'atracao', type:'Parque', priceLabel:'R$ 60-80', priceMin:60, priceMax:80, schedule:'Verificar', duration:'2-3h', tips:'Dinossauros, cachoeira, trilha' },
+      { name:'Alpen Park', category:'atracao', type:'Parque', priceLabel:'R$ 70-100', priceMin:70, priceMax:100, schedule:'Verificar', duration:'2-3h', tips:'Trenó, montanha russa, natureza' },
+      { name:'Catedral de Pedra (Canela)', category:'atracao', type:'Monumento', priceLabel:'R$ 20-30', priceMin:20, priceMax:30, schedule:'Verificar', duration:'1-2h', tips:'65m de altura, Museu dos Sinos - imperdível!' },
+      { name:'Skyglass', category:'atracao', type:'Atração', priceLabel:'R$ 26,50', priceMin:26.5, priceMax:26.5, schedule:'Verificar', duration:'1-2h', tips:'Plataforma a 360m - para quem não tem medo!' },
+      { name:'Bondinhos Aéreos (Canela)', category:'atracao', type:'Atração', priceLabel:'R$ 40-60', priceMin:40, priceMax:60, schedule:'Verificar', duration:'1-2h', tips:'Teleférico com vista panorâmica da Serra' },
+      { name:'Mundo Gelado (Canela)', category:'atracao', type:'Parque', priceLabel:'R$ 50-80', priceMin:50, priceMax:80, schedule:'Verificar', duration:'1-2h', tips:'Parque de gelo a -23°C, esculturas únicas' },
+      { name:'Mini Mundo', category:'atracao', type:'Museu', priceLabel:'R$ 50-70', priceMin:50, priceMax:70, schedule:'Verificar', duration:'1-2h', tips:'Miniaturas de cidades - crianças adoram!' },
+      { name:'Hollywood Dream Cars', category:'atracao', type:'Museu', priceLabel:'Verificar', schedule:'Verificar', duration:'1-2h', tips:'Carros de filmes famosos, ótimo para fotos' },
+      { name:'Motor Show', category:'atracao', type:'Museu', priceLabel:'Verificar', schedule:'Verificar', duration:'1-2h', tips:'Motos históricas e coleção especial' },
+      { name:'Supercarros', category:'atracao', type:'Museu', priceLabel:'Verificar', schedule:'Verificar', duration:'1-2h', tips:'Simulador Porsche, carros de luxo' },
+      { name:'Vinícola Jolimont', category:'atracao', type:'Enoturismo', priceLabel:'R$ 89-150', priceMin:89, priceMax:150, schedule:'Verificar', duration:'2-3h', tips:'Degustação de vinhos, pisa de uva' },
+      { name:'Olivas de Gramado', category:'atracao', type:'Enoturismo', priceLabel:'Verificar', schedule:'Verificar', duration:'1-2h', tips:'Produção de azeite artesanal, vista da Serra' },
+
+      { name:'1835 Carne e Brasa', category:'restaurante', type:'Rodízio de Carnes', priceLabel:'R$ 120-180', priceMin:120, priceMax:180, schedule:'11h-22h (diariamente)', address:'Rua das Flores, 222, Canela', tips:'Muito concorrido - RESERVAR com antecedência!' },
+      { name:'Ocre Restaurante & Bar', category:'restaurante', type:'Contemporânea', priceLabel:'R$ 80-150', priceMin:80, priceMax:150, schedule:'Bar 15h+ | Rest. 19h+', address:'R. Mario Bertolucci, 48', tips:'Chef Roberta Sudbrack - RESERVAR!' },
+      { name:'Vinolab', category:'restaurante', type:'Culinária com Vinho', priceLabel:'R$ 100-180', priceMin:100, priceMax:180, schedule:'3ª-6ª jantar | Sáb-Dom almoço/jantar', address:'Av. Borges de Medeiros, 3150', tips:'Crie seu próprio vinho - RESERVAR!' },
+      { name:'Giostra', category:'restaurante', type:'Italiana', priceLabel:'R$ 80-150', priceMin:80, priceMax:150, schedule:'Verificar', address:'Av. Borges de Medeiros, 3166', tips:'Chef Carla Pernambuco - experiência única' },
+      { name:'El Cordero', category:'restaurante', type:'Rodízio de Cordeiro', priceLabel:'R$ 100-150', priceMin:100, priceMax:150, schedule:'Verificar', address:'Av. Borges de Medeiros, 3017', tips:'Especialidade em cordeiro da Serra Gaúcha' },
+      { name:'Garfo e Bombacha', category:'restaurante', type:'Rodízio Gaúcho', priceLabel:'R$ 100-150', priceMin:100, priceMax:150, schedule:'Nem todos os dias', address:'RS 466, km 2, Canela', tips:'Show folclórico à noite - verificar programação' },
+      { name:'Galeto di Paolo', category:'restaurante', type:'Galeto Tradicional', priceLabel:'R$ 50-100', priceMin:50, priceMax:100, schedule:'Verificar', address:'Verificar', tips:'Tradição da Serra Gaúcha - imperdível!' },
+      { name:'Pastasciutta', category:'restaurante', type:'Massas Italianas', priceLabel:'R$ 60-120', priceMin:60, priceMax:120, schedule:'Verificar', address:'Verificar', tips:'Combine a massa e o molho do seu jeito' },
+      { name:'Magnólia', category:'restaurante', type:'Restaurante Charmoso', priceLabel:'R$ 80-150', priceMin:80, priceMax:150, schedule:'Verificar', address:'Canela', tips:'Ambiente aconchegante - ótimo para noite romântica' },
+      { name:'Fondue (vários locais)', category:'restaurante', type:'Fondue', priceLabel:'R$ 60-120', priceMin:60, priceMax:120, schedule:'Principalmente jantares', address:'Vários em Gramado', tips:'Não pode faltar! Especialidade no frio da Serra' },
+      { name:'Casa da Velha Bruxa', category:'restaurante', type:'Chocolate/Café', priceLabel:'R$ 30-80', priceMin:30, priceMax:80, schedule:'Verificar', address:'Verificar', tips:'Chocolate cremoso espesso - sobremesa incrível' },
+      { name:'Gnomo', category:'restaurante', type:'Lanches', priceLabel:'R$ 20-50', priceMin:20, priceMax:50, schedule:'Verificar', address:'Verificar', tips:'Xis-coração prensado - clássico de Gramado' },
+      { name:'Bêrga Motta', category:'restaurante', type:'Forno a Lenha', priceLabel:'R$ 60-120', priceMin:60, priceMax:120, schedule:'Fim de semana', address:'Verificar', tips:'Delícias do forno a lenha' },
+      { name:'Toro', category:'restaurante', type:'Drinks e Petiscos', priceLabel:'R$ 40-100', priceMin:40, priceMax:100, schedule:'Verificar', address:'Verificar', tips:'Drinks modernos e petiscos carnívoros' },
+    ],
+  };
+  function curatedKeyFor(trip){
+    const base = (trip.destination || trip.name || '').toLowerCase();
+    if(base.includes('gramado')) return 'gramado';
+    return null;
+  }
+
+  async function fetchTextWithTimeout(url, ms){
+    const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const id = controller ? setTimeout(()=>controller.abort(), ms || 7000) : null;
+    try{
+      const res = await fetch(url, controller ? { signal: controller.signal } : undefined);
+      if(id) clearTimeout(id);
+      if(!res.ok) return null;
+      return await res.text();
+    }catch(e){
+      if(id) clearTimeout(id);
+      return null;
+    }
+  }
+
+  function parseSeeDoSections(html){
+    if(typeof DOMParser === 'undefined') return [];
+    try{
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const headings = Array.from(doc.querySelectorAll('h2,h3'));
+      const wanted = ['see','do','ver','fazer'];
+      const results = [];
+      headings.forEach(h => {
+        const text = (h.textContent||'').trim().toLowerCase();
+        if(!wanted.some(w => text === w || text.startsWith(w+' '))) return;
+        let node = h.nextElementSibling;
+        while(node && !/^H[1-3]$/.test(node.tagName)){
+          if(node.tagName === 'UL' || node.tagName === 'OL'){
+            Array.from(node.querySelectorAll('li')).forEach(li => {
+              const full = (li.textContent||'').replace(/\s+/g,' ').trim();
+              if(!full) return;
+              const boldEl = li.querySelector('b, strong');
+              const name = boldEl ? boldEl.textContent.trim().replace(/[.:]\s*$/,'') : full.split('.')[0].slice(0,60);
+              results.push({ name: (name||full.slice(0,60)), category:'geral', tips: full.slice(0,220) });
+            });
+          }
+          node = node.nextElementSibling;
+        }
+      });
+      const seen = new Set();
+      return results.filter(r => { const k=r.name.toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true; }).slice(0,12);
+    }catch(e){
+      return [];
+    }
+  }
+
+  async function fetchWikivoyageDoSee(trip){
+    const queries = destinationQueries(trip);
+    for(const domain of ['en.wikivoyage.org','pt.wikivoyage.org']){
+      for(const q of queries){
+        let title = q;
+        let html = await fetchTextWithTimeout(`https://${domain}/api/rest_v1/page/html/${encodeURIComponent(title)}`);
+        if(!html){
+          const found = await wikiSearchTitle(domain, q);
+          if(found) html = await fetchTextWithTimeout(`https://${domain}/api/rest_v1/page/html/${encodeURIComponent(found)}`);
+        }
+        if(html){
+          const items = parseSeeDoSections(html);
+          if(items.length) return items;
+        }
+      }
+    }
+    return [];
+  }
+
+  function renderSuggestions(list){
+    const body = $('suggestionsBody');
+    if(!list || list.length === 0){
+      body.innerHTML = '<p class="no-tickets">Nenhuma sugestão encontrada ainda para este destino. Você pode tentar atualizar, ou simplesmente adicionar atividades manualmente.</p>';
+      return;
+    }
+    const groups = { atracao:[], restaurante:[], geral:[] };
+    list.forEach((s,i) => { (groups[s.category] || groups.geral).push({ ...s, _idx:i }); });
+    function renderGroup(title, items){
+      if(!items.length) return '';
+      let h = `<div class="suggest-label">${escapeHtml(title)}</div>`;
+      items.forEach(s => {
+        const meta = [s.type, s.priceLabel, s.duration, s.address].filter(Boolean).map(escapeHtml).join(' · ');
+        h += `<div class="suggestion-row">
+          <div class="suggestion-main">
+            <div class="suggestion-name">${escapeHtml(s.name)}</div>
+            ${meta ? `<div class="suggestion-meta">${meta}</div>` : ''}
+            ${s.tips ? `<div class="suggestion-tips">${escapeHtml(s.tips)}</div>` : ''}
+          </div>
+          <button class="btn btn-ghost btn-sm" data-add-suggestion="${s._idx}">Adicionar à agenda</button>
+        </div>`;
+      });
+      return h;
+    }
+    body.innerHTML = renderGroup('Atrações', groups.atracao) + renderGroup('Restaurantes', groups.restaurante) + renderGroup('Sugestões encontradas', groups.geral);
+    qsa('[data-add-suggestion]').forEach(btn => btn.addEventListener('click', () => {
+      const s = list[parseInt(btn.dataset.addSuggestion)];
+      openActivityModal(null, null, s);
+    }));
+  }
+
+  async function ensureSuggestions(trip){
+    if(trip.suggestions !== undefined){ renderSuggestions(trip.suggestions); return; }
+    if(suggestionsFetchInFlight.has(trip.id)) return;
+    $('suggestionsBody').innerHTML = '<p class="no-tickets">Buscando sugestões...</p>';
+    suggestionsFetchInFlight.add(trip.id);
+    try{
+      const key = curatedKeyFor(trip);
+      let list = (key && CURATED_SUGGESTIONS[key]) ? CURATED_SUGGESTIONS[key] : await fetchWikivoyageDoSee(trip);
+      await db.collection('trips').doc(trip.id).update({ suggestions: list });
+    }catch(e){
+      console.error(e);
+    }finally{
+      suggestionsFetchInFlight.delete(trip.id);
+    }
+  }
+  $('refreshSuggestionsBtn').addEventListener('click', async () => {
+    const t = currentTrip();
+    if(!t) return;
+    try{
+      await db.collection('trips').doc(t.id).update({ suggestions: firebase.firestore.FieldValue.delete() });
+      showToast('Atualizando sugestões...');
+    }catch(e){ console.error(e); showToast('Erro ao atualizar sugestões.'); }
+  });
+
+  /* ============================================================
      GENERAL INFO + PACKING LIST
   ============================================================ */
   function renderGeneralInfo(){
@@ -1266,16 +1452,25 @@ service cloud.firestore {
   }
   $('addTicketBtn').addEventListener('click', () => addTicketRow('', ''));
 
-  function openActivityModal(activity, prefillDate){
+  function openActivityModal(activity, prefillDate, prefill){
     editingActivityId = activity ? activity.id : null;
     $('activityModalTitle').textContent = activity ? 'Editar atividade' : 'Nova atividade';
-    $('amName').value = activity ? activity.name||'' : '';
+    $('amName').value = activity ? activity.name||'' : (prefill ? prefill.name||'' : '');
     $('amDate').value = activity ? activity.date||'' : (prefillDate || '');
     $('amTime').value = activity ? activity.time||'' : '';
-    $('amLink').value = activity ? activity.link||'' : '';
-    $('amPrice').value = activity && activity.price !== null && activity.price !== undefined ? activity.price : '';
+    $('amLink').value = activity ? activity.link||'' : (prefill && prefill.link) || '';
+    let priceVal = '';
+    if(activity && activity.price !== null && activity.price !== undefined) priceVal = activity.price;
+    else if(prefill && prefill.priceMin !== undefined && prefill.priceMin !== null) priceVal = prefill.priceMin;
+    $('amPrice').value = priceVal;
     $('ticketRows').innerHTML = '';
-    const tk = activity && activity.ticketOptions ? activity.ticketOptions : [];
+    let tk = [];
+    if(activity && activity.ticketOptions) tk = activity.ticketOptions;
+    else if(prefill && prefill.priceMin !== undefined && prefill.priceMin !== null){
+      tk = (prefill.priceMax !== undefined && prefill.priceMax !== null && prefill.priceMax !== prefill.priceMin)
+        ? [{label:'Preço mínimo', price:prefill.priceMin}, {label:'Preço máximo', price:prefill.priceMax}]
+        : [{label:'Preço', price:prefill.priceMin}];
+    }
     if(tk.length){ tk.forEach(t => addTicketRow(t.label, t.price)); }
     closeModal('dayModalOverlay');
     openModal('activityModalOverlay');
@@ -1540,6 +1735,7 @@ service cloud.firestore {
           { item:'Remédios pessoais e analgésicos', packed:false },
           { item:'Carregador de celular e power bank', packed:false },
         ],
+        suggestions: CURATED_SUGGESTIONS.gramado,
       };
       const tripRef = await db.collection('trips').add(tripData);
       const tripId = tripRef.id;
