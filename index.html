@@ -67,12 +67,9 @@
   .text-btn.on-dark{color:rgba(255,255,255,.85);}
   .text-btn.on-dark:hover{background:rgba(255,255,255,.18); color:#fff;}
 
-  main{max-width:1180px; margin:0 auto; padding:24px 18px 60px;}
+  main{max-width:920px; margin:0 auto; padding:24px 18px 60px;}
 
-  /* ===== Layout with collapsible sidebar ===== */
-  .layout{display:flex; gap:20px; align-items:flex-start;}
-  .main-col{flex:1; min-width:0;}
-  .sidebar-wrap{display:flex; align-items:flex-start; flex-shrink:0; position:sticky; top:78px;}
+  /* ===== Sidebar drawer (always slides in from the side, any screen width) ===== */
   .sidebar-fab{
     position:fixed; right:22px; bottom:22px; z-index:90;
     background:var(--accent); color:#fff; border:none; border-radius:999px;
@@ -83,11 +80,16 @@
   .sidebar-fab:hover{background:var(--accent-dark); transform:translateY(-1px);}
   .sidebar-fab .chevron{display:inline-block; transition:transform .2s; font-size:15px;}
   .sidebar-fab.is-open .chevron{transform:rotate(180deg);}
-  .sidebar{
-    width:300px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
-    overflow:hidden; transition:width .22s ease, opacity .18s ease; max-height:82vh; display:flex; flex-direction:column;
+  .sidebar-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:140; opacity:0; pointer-events:none; transition:opacity .25s;
   }
-  .sidebar.collapsed{width:0; opacity:0; border:none;}
+  .sidebar-backdrop.show{opacity:1; pointer-events:auto;}
+  .sidebar{
+    position:fixed; top:0; right:0; bottom:0; width:340px; max-width:88vw; z-index:150;
+    background:var(--surface); border-left:1px solid var(--line); box-shadow:-14px 0 36px rgba(0,0,0,.5);
+    display:flex; flex-direction:column; transform:translateX(0); transition:transform .28s ease;
+  }
+  .sidebar.collapsed{transform:translateX(100%);}
   .sidebar-head{padding:16px 18px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0;}
   .sidebar-head h2{font-size:14.5px; flex:1;}
   .sidebar-body{padding:6px 18px 18px; overflow-y:auto; flex:1;}
@@ -96,12 +98,6 @@
   .sidebar-section-head{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;}
   .sidebar-section-head h3{font-size:13px; color:var(--ink); flex:1; margin:0;}
   #suggestionsBody .suggest-label:first-child{margin-top:12px;}
-  @media (max-width:880px){
-    .layout{flex-direction:column;}
-    .sidebar-wrap{position:static; flex-direction:column; width:100%;}
-    .sidebar{width:100% !important; max-height:1400px;}
-    .sidebar.collapsed{max-height:0; opacity:0; border:none;}
-  }
 
   .empty-state{text-align:center; padding:80px 24px; color:var(--muted);}
   .empty-state h2{color:var(--ink); font-size:23px; margin:0 0 8px;}
@@ -348,8 +344,7 @@
       </div>
     </div>
 
-    <div id="tripView" class="hidden layout">
-    <div class="main-col">
+    <div id="tripView" class="hidden">
       <div class="trip-hero" id="tripHero">
         <img id="tripHeroImg" class="hero-img" alt="">
         <div class="hero-scrim"></div>
@@ -446,36 +441,34 @@
         <div class="card-body" id="expensesBody"></div>
       </div>
     </div>
-
-    <div class="sidebar-wrap" id="sidebarWrap">
-      <aside class="sidebar" id="suggestionsSidebar">
-        <div class="sidebar-head">
-          <h2>Painel lateral</h2>
-          <button class="text-btn" id="closeSidebarBtn">Fechar</button>
-        </div>
-        <div class="sidebar-body">
-          <div class="sidebar-section" id="suggestionsSubsection">
-            <div class="sidebar-section-head">
-              <h3>Sugestões para o destino</h3>
-              <button class="text-btn" id="refreshSuggestionsBtn">Atualizar</button>
-            </div>
-            <div id="suggestionsBody"><p class="no-tickets">Buscando sugestões...</p></div>
-          </div>
-          <div class="sidebar-section" id="tipsSubsection">
-            <div class="sidebar-section-head"><h3>Formas de economizar</h3></div>
-            <div class="idea-box loading hidden" id="destinationIdeas">Buscando informações sobre o destino...</div>
-            <div id="suggestedTipsBox"></div>
-            <ul class="tips-list" id="tipsList"></ul>
-            <div class="tip-add">
-              <input type="text" id="newTipInput" placeholder="Ex: comprar ingresso online com desconto...">
-              <button class="btn btn-ghost btn-sm" id="addTipBtn">Adicionar</button>
-            </div>
-          </div>
-        </div>
-      </aside>
-    </div>
-    </div>
   </main>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <aside class="sidebar collapsed" id="suggestionsSidebar">
+    <div class="sidebar-head">
+      <h2>Painel lateral</h2>
+      <button class="text-btn" id="closeSidebarBtn">Fechar</button>
+    </div>
+    <div class="sidebar-body">
+      <div class="sidebar-section" id="suggestionsSubsection">
+        <div class="sidebar-section-head">
+          <h3>Sugestões para o destino</h3>
+          <button class="text-btn" id="refreshSuggestionsBtn">Atualizar</button>
+        </div>
+        <div id="suggestionsBody"><p class="no-tickets">Buscando sugestões...</p></div>
+      </div>
+      <div class="sidebar-section" id="tipsSubsection">
+        <div class="sidebar-section-head"><h3>Formas de economizar</h3></div>
+        <div class="idea-box loading hidden" id="destinationIdeas">Buscando informações sobre o destino...</div>
+        <div id="suggestedTipsBox"></div>
+        <ul class="tips-list" id="tipsList"></ul>
+        <div class="tip-add">
+          <input type="text" id="newTipInput" placeholder="Ex: comprar ingresso online com desconto...">
+          <button class="btn btn-ghost btn-sm" id="addTipBtn">Adicionar</button>
+        </div>
+      </div>
+    </div>
+  </aside>
   <button class="sidebar-fab hidden" id="sidebarToggle" type="button">Sugestões e dicas <span class="chevron">‹</span></button>
 </div>
 
@@ -620,15 +613,17 @@
 
   function setSidebarCollapsed(collapsed){
     $('suggestionsSidebar').classList.toggle('collapsed', collapsed);
+    $('sidebarBackdrop').classList.toggle('show', !collapsed);
     $('sidebarToggle').classList.toggle('is-open', !collapsed);
     $('sidebarToggle').innerHTML = (collapsed ? 'Sugestões e dicas' : 'Fechar painel') + ' <span class="chevron">‹</span>';
     localStorage.setItem('cv_sidebarCollapsed', collapsed ? '1' : '0');
   }
-  setSidebarCollapsed(localStorage.getItem('cv_sidebarCollapsed') === '1');
+  setSidebarCollapsed(localStorage.getItem('cv_sidebarCollapsed') !== '0');
   $('sidebarToggle').addEventListener('click', () => {
     setSidebarCollapsed(!$('suggestionsSidebar').classList.contains('collapsed'));
   });
   $('closeSidebarBtn').addEventListener('click', () => setSidebarCollapsed(true));
+  $('sidebarBackdrop').addEventListener('click', () => setSidebarCollapsed(true));
   $('heroSuggestionsPill').addEventListener('click', () => {
     setSidebarCollapsed(false);
     $('suggestionsSubsection').scrollIntoView({ behavior:'smooth', block:'start' });
