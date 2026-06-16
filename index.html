@@ -58,7 +58,34 @@
   .text-btn.on-dark{color:rgba(255,255,255,.85);}
   .text-btn.on-dark:hover{background:rgba(255,255,255,.18); color:#fff;}
 
-  main{max-width:920px; margin:0 auto; padding:24px 18px 60px;}
+  main{max-width:1180px; margin:0 auto; padding:24px 18px 60px;}
+
+  /* ===== Layout with collapsible sidebar ===== */
+  .layout{display:flex; gap:20px; align-items:flex-start;}
+  .main-col{flex:1; min-width:0;}
+  .sidebar-wrap{display:flex; align-items:flex-start; flex-shrink:0; position:sticky; top:78px;}
+  .sidebar-toggle{
+    writing-mode:vertical-rl; text-orientation:mixed; background:var(--surface); border:1px solid var(--line);
+    border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:16px 9px; font-size:12px; font-weight:600;
+    color:var(--muted); cursor:pointer; white-space:nowrap; flex-shrink:0;
+  }
+  .sidebar-toggle:hover{color:var(--accent-dark); border-color:var(--accent);}
+  .sidebar{
+    width:300px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; transition:width .22s ease, opacity .18s ease; max-height:82vh; display:flex; flex-direction:column;
+  }
+  .sidebar.collapsed{width:0; opacity:0; border:none;}
+  .sidebar-head{padding:16px 18px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0;}
+  .sidebar-head h2{font-size:14.5px; flex:1;}
+  .sidebar-body{padding:6px 18px 18px; overflow-y:auto; flex:1;}
+  #suggestionsBody .suggest-label:first-child{margin-top:12px;}
+  @media (max-width:880px){
+    .layout{flex-direction:column;}
+    .sidebar-wrap{position:static; flex-direction:column; width:100%;}
+    .sidebar-toggle{writing-mode:horizontal-tb; border-radius:var(--radius-sm); width:100%; text-align:left; padding:10px 14px;}
+    .sidebar{width:100% !important; max-height:1400px;}
+    .sidebar.collapsed{max-height:0; opacity:0; border:none;}
+  }
 
   .empty-state{text-align:center; padding:80px 24px; color:var(--muted);}
   .empty-state h2{color:var(--ink); font-size:23px; margin:0 0 8px;}
@@ -219,14 +246,13 @@
   .suggest-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
   .suggest-row:last-child{border-bottom:none;}
   .suggest-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:18px 0 4px;}
-  #suggestionsBody .suggest-label:first-child{margin-top:0;}
-  .suggestion-row{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid var(--line);}
+  .suggestion-row{display:flex; flex-direction:column; align-items:stretch; gap:8px; padding:11px 0; border-bottom:1px solid var(--line);}
   .suggestion-row:last-child{border-bottom:none;}
   .suggestion-main{flex:1; min-width:0;}
-  .suggestion-name{font-weight:600; font-size:14px; color:var(--ink);}
-  .suggestion-meta{font-size:12px; color:var(--muted); margin-top:3px;}
-  .suggestion-tips{font-size:12.5px; color:#5b5d56; margin-top:4px; line-height:1.45;}
-  .suggestion-row .btn{flex-shrink:0; margin-top:2px;}
+  .suggestion-name{font-weight:600; font-size:13.5px; color:var(--ink);}
+  .suggestion-meta{font-size:11.5px; color:var(--muted); margin-top:3px;}
+  .suggestion-tips{font-size:12px; color:#5b5d56; margin-top:4px; line-height:1.45;}
+  .suggestion-row .btn{flex-shrink:0; align-self:flex-start;}
 
   /* ===== Modals ===== */
   .overlay{position:fixed; inset:0; background:rgba(15,17,15,.5); display:flex; align-items:center; justify-content:center; padding:18px; z-index:200;}
@@ -240,6 +266,15 @@
   .ticket-row input{flex:1;}
   .ticket-row input.price-input{max-width:110px; flex:none;}
   .add-ticket-btn{font-size:12.5px; color:var(--accent-dark); background:none; border:1.5px dashed #DDD7C8; border-radius:8px; padding:7px 12px; width:100%; font-weight:600;}
+
+  .star-picker{display:flex; gap:5px;}
+  .star-btn{background:none; border:none; font-size:25px; line-height:1; color:#DCD6C7; padding:0; cursor:pointer; transition:color .12s;}
+  .star-btn.filled{color:#E0A23B;}
+  .star-btn:hover{color:#E0A23B;}
+  .activity-rating{margin-top:4px; font-size:14px; letter-spacing:1px; line-height:1;}
+  .activity-rating .star-disp{color:#E2DCC8;}
+  .activity-rating .star-disp.filled{color:#E0A23B;}
+  .activity-comment{font-size:12.5px; color:#5b5d56; margin-top:5px; font-style:italic; line-height:1.5;}
 
   /* ===== Connection banner / toast ===== */
   #connBanner{background:#FBE3DA; border-bottom:2px solid var(--accent); color:#8C3219; padding:14px 22px; font-size:13.5px; line-height:1.6;}
@@ -278,7 +313,8 @@
       </div>
     </div>
 
-    <div id="tripView" class="hidden">
+    <div id="tripView" class="hidden layout">
+    <div class="main-col">
       <div class="trip-hero" id="tripHero">
         <img id="tripHeroImg" class="hero-img" alt="">
         <div class="hero-scrim"></div>
@@ -301,7 +337,7 @@
           <div class="hero-pills">
             <a class="pill-btn" href="#calendarSection">Calendário</a>
             <a class="pill-btn" href="#activitiesSection">Atividades</a>
-            <a class="pill-btn" href="#suggestionsSection">Sugestões</a>
+            <button class="pill-btn" id="heroSuggestionsPill" type="button">Sugestões</button>
             <a class="pill-btn" href="#vehicleSection">Veículo</a>
             <a class="pill-btn" href="#expensesSection">Gastos</a>
             <a class="pill-btn" href="#tipsSection">Dicas</a>
@@ -349,14 +385,6 @@
         <div class="card-body" id="activitiesList"><p class="no-tickets">Nenhuma atividade cadastrada ainda.</p></div>
       </div>
 
-      <div class="card" id="suggestionsSection">
-        <div class="card-head">
-          <h2>Sugestões para o destino</h2>
-          <button class="text-btn" id="refreshSuggestionsBtn">Atualizar</button>
-        </div>
-        <div class="card-body" id="suggestionsBody"><p class="no-tickets">Buscando sugestões...</p></div>
-      </div>
-
       <div class="card" id="vehicleSection">
         <div class="card-head"><h2>Locação de veículo</h2></div>
         <div class="card-body">
@@ -396,6 +424,18 @@
         </div>
       </div>
     </div>
+
+    <div class="sidebar-wrap" id="sidebarWrap">
+      <button class="sidebar-toggle" id="sidebarToggle" type="button">Sugestões</button>
+      <aside class="sidebar" id="suggestionsSidebar">
+        <div class="sidebar-head">
+          <h2>Sugestões para o destino</h2>
+          <button class="text-btn" id="refreshSuggestionsBtn">Atualizar</button>
+        </div>
+        <div class="sidebar-body" id="suggestionsBody"><p class="no-tickets">Buscando sugestões...</p></div>
+      </aside>
+    </div>
+    </div>
   </main>
 </div>
 
@@ -434,6 +474,17 @@
         <div id="ticketRows"></div>
         <button type="button" class="add-ticket-btn" id="addTicketBtn">Adicionar opção de ingresso</button>
       </div>
+      <div class="field">
+        <label>Sua nota (opcional)</label>
+        <div class="star-picker" id="amStars">
+          <button type="button" class="star-btn" data-star="1">★</button>
+          <button type="button" class="star-btn" data-star="2">★</button>
+          <button type="button" class="star-btn" data-star="3">★</button>
+          <button type="button" class="star-btn" data-star="4">★</button>
+          <button type="button" class="star-btn" data-star="5">★</button>
+        </div>
+      </div>
+      <div class="field"><label>Comentário (opcional)</label><textarea id="amComment" rows="2" placeholder="O que você achou? Vale a pena?"></textarea></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" data-close="activityModalOverlay">Cancelar</button>
@@ -526,6 +577,19 @@
   function closeModal(id){ $(id).classList.add('hidden'); }
   qsa('[data-close]').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.close)));
   qsa('.overlay').forEach(ov => ov.addEventListener('click', (e) => { if(e.target === ov) ov.classList.add('hidden'); }));
+
+  function setSidebarCollapsed(collapsed){
+    $('suggestionsSidebar').classList.toggle('collapsed', collapsed);
+    localStorage.setItem('cv_sidebarCollapsed', collapsed ? '1' : '0');
+  }
+  setSidebarCollapsed(localStorage.getItem('cv_sidebarCollapsed') === '1');
+  $('sidebarToggle').addEventListener('click', () => {
+    setSidebarCollapsed(!$('suggestionsSidebar').classList.contains('collapsed'));
+  });
+  $('heroSuggestionsPill').addEventListener('click', () => {
+    setSidebarCollapsed(false);
+    $('suggestionsSidebar').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
 
   function showConnError(){
     const banner = $('connBanner');
@@ -1399,6 +1463,8 @@ service cloud.firestore {
         <div class="activity-main">
           <div class="activity-name">${escapeHtml(a.name)}</div>
           ${metaHtml ? `<div class="activity-meta">${metaHtml}</div>` : ''}
+          ${starsDisplay(a.rating)}
+          ${a.comment ? `<div class="activity-comment">"${escapeHtml(a.comment)}"</div>` : ''}
           ${tickets.length ? `<button class="ticket-toggle" data-action="tickets" data-id="${a.id}">Mostrar ingressos possíveis (${tickets.length})</button>` : ''}
         </div>
         <div class="activity-actions">
@@ -1452,6 +1518,27 @@ service cloud.firestore {
   }
   $('addTicketBtn').addEventListener('click', () => addTicketRow('', ''));
 
+  let currentStarValue = 0;
+  function setStarValue(v){
+    currentStarValue = v;
+    qsa('.star-btn', $('amStars')).forEach(btn => {
+      btn.classList.toggle('filled', parseInt(btn.dataset.star) <= v);
+    });
+  }
+  qsa('.star-btn', $('amStars')).forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = parseInt(btn.dataset.star);
+      setStarValue(v === currentStarValue ? 0 : v);
+    });
+  });
+
+  function starsDisplay(rating){
+    if(!rating) return '';
+    let s = '';
+    for(let i=1;i<=5;i++){ s += `<span class="star-disp ${i<=rating?'filled':''}">★</span>`; }
+    return `<div class="activity-rating">${s}</div>`;
+  }
+
   function openActivityModal(activity, prefillDate, prefill){
     editingActivityId = activity ? activity.id : null;
     $('activityModalTitle').textContent = activity ? 'Editar atividade' : 'Nova atividade';
@@ -1472,6 +1559,8 @@ service cloud.firestore {
         : [{label:'Preço', price:prefill.priceMin}];
     }
     if(tk.length){ tk.forEach(t => addTicketRow(t.label, t.price)); }
+    setStarValue(activity ? (activity.rating || 0) : 0);
+    $('amComment').value = activity ? (activity.comment || '') : '';
     closeModal('dayModalOverlay');
     openModal('activityModalOverlay');
   }
@@ -1494,6 +1583,8 @@ service cloud.firestore {
       link: $('amLink').value.trim(),
       price: priceVal === '' ? null : parseFloat(priceVal),
       ticketOptions,
+      rating: currentStarValue,
+      comment: $('amComment').value.trim(),
     };
     try{
       if(editingActivityId){
