@@ -73,12 +73,16 @@
   .layout{display:flex; gap:20px; align-items:flex-start;}
   .main-col{flex:1; min-width:0;}
   .sidebar-wrap{display:flex; align-items:flex-start; flex-shrink:0; position:sticky; top:78px;}
-  .sidebar-toggle{
-    writing-mode:vertical-rl; text-orientation:mixed; background:var(--surface); border:1px solid var(--line);
-    border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:16px 9px; font-size:12px; font-weight:600;
-    color:var(--muted); cursor:pointer; white-space:nowrap; flex-shrink:0;
+  .sidebar-fab{
+    position:fixed; right:22px; bottom:22px; z-index:90;
+    background:var(--accent); color:#fff; border:none; border-radius:999px;
+    padding:14px 22px; font-size:13.5px; font-weight:700; cursor:pointer;
+    box-shadow:0 10px 28px rgba(0,0,0,.55); display:flex; align-items:center; gap:8px;
+    transition:background .15s, transform .12s;
   }
-  .sidebar-toggle:hover{color:var(--accent-dark); border-color:var(--accent);}
+  .sidebar-fab:hover{background:var(--accent-dark); transform:translateY(-1px);}
+  .sidebar-fab .chevron{display:inline-block; transition:transform .2s; font-size:15px;}
+  .sidebar-fab.is-open .chevron{transform:rotate(180deg);}
   .sidebar{
     width:300px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
     overflow:hidden; transition:width .22s ease, opacity .18s ease; max-height:82vh; display:flex; flex-direction:column;
@@ -95,7 +99,6 @@
   @media (max-width:880px){
     .layout{flex-direction:column;}
     .sidebar-wrap{position:static; flex-direction:column; width:100%;}
-    .sidebar-toggle{writing-mode:horizontal-tb; border-radius:var(--radius-sm); width:100%; text-align:left; padding:10px 14px;}
     .sidebar{width:100% !important; max-height:1400px;}
     .sidebar.collapsed{max-height:0; opacity:0; border:none;}
   }
@@ -445,7 +448,6 @@
     </div>
 
     <div class="sidebar-wrap" id="sidebarWrap">
-      <button class="sidebar-toggle" id="sidebarToggle" type="button">Sugestões e dicas</button>
       <aside class="sidebar" id="suggestionsSidebar">
         <div class="sidebar-head">
           <h2>Painel lateral</h2>
@@ -474,6 +476,7 @@
     </div>
     </div>
   </main>
+  <button class="sidebar-fab hidden" id="sidebarToggle" type="button">Sugestões e dicas <span class="chevron">‹</span></button>
 </div>
 
 <div class="overlay hidden" id="tripModalOverlay">
@@ -617,7 +620,8 @@
 
   function setSidebarCollapsed(collapsed){
     $('suggestionsSidebar').classList.toggle('collapsed', collapsed);
-    $('sidebarToggle').textContent = collapsed ? 'Sugestões e dicas' : 'Fechar painel';
+    $('sidebarToggle').classList.toggle('is-open', !collapsed);
+    $('sidebarToggle').innerHTML = (collapsed ? 'Sugestões e dicas' : 'Fechar painel') + ' <span class="chevron">‹</span>';
     localStorage.setItem('cv_sidebarCollapsed', collapsed ? '1' : '0');
   }
   setSidebarCollapsed(localStorage.getItem('cv_sidebarCollapsed') === '1');
@@ -808,6 +812,7 @@ service cloud.firestore {
   function showNoTripState(){
     $('noTripState').classList.remove('hidden');
     $('tripView').classList.add('hidden');
+    $('sidebarToggle').classList.add('hidden');
   }
 
   function selectTrip(tripId){
@@ -815,6 +820,7 @@ service cloud.firestore {
     if(!tripId){ showNoTripState(); return; }
     $('noTripState').classList.add('hidden');
     $('tripView').classList.remove('hidden');
+    $('sidebarToggle').classList.remove('hidden');
     renderTripSelector();
     renderTripHero();
     const t = trips.find(x => x.id === tripId);
