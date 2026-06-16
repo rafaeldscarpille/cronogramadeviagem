@@ -9,9 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#15191C; --paper:#FAFAF7; --surface:#FFFFFF; --line:#EAE7E1; --muted:#878a82;
-    --accent:#D6643A; --accent-dark:#B84F2B; --accent-soft:#FBEAE2;
-    --success:#1F8A5F; --success-soft:#E3F3EA;
+    --ink:#ECE9E2; --paper:#0D0F12; --surface:#181B1F; --line:#2B2F35; --muted:#8B9098;
+    --accent:#E2754C; --accent-dark:#F0936D; --accent-soft:rgba(226,117,76,.16);
+    --success:#34B27E; --success-soft:rgba(52,178,126,.16);
+    --danger:#FF6B4A; --danger-soft:rgba(255,107,74,.14);
+    --code-bg:#08090B; --track:#23272D; --dim:#454A50;
     --radius:14px; --radius-sm:9px;
   }
   *{box-sizing:border-box;}
@@ -35,6 +37,13 @@
   header.appbar .brand{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink);}
   .spacer{flex:1;}
   .trip-picker{display:flex; align-items:center; gap:8px;}
+  @media (max-width:640px){
+    header.appbar{padding:12px 14px; gap:10px;}
+    header.appbar .brand{font-size:13.5px;}
+    .trip-picker{width:100%; order:3;}
+    select#tripSelect{flex:1; min-width:0;}
+    .spacer{flex-basis:100%; height:0; order:2;}
+  }
   select#tripSelect{
     background:var(--paper); color:var(--ink); border:1px solid var(--line);
     border-radius:8px; padding:8px 12px; font-size:13.5px; min-width:170px; max-width:230px;
@@ -54,7 +63,7 @@
     padding:5px 9px; border-radius:7px; transition:background .12s, color .12s;
   }
   .text-btn:hover{background:var(--accent-soft); color:var(--accent-dark);}
-  .text-btn.danger:hover{background:#FBE3DA; color:#B0392A;}
+  .text-btn.danger:hover{background:var(--danger-soft); color:var(--danger);}
   .text-btn.on-dark{color:rgba(255,255,255,.85);}
   .text-btn.on-dark:hover{background:rgba(255,255,255,.18); color:#fff;}
 
@@ -78,6 +87,10 @@
   .sidebar-head{padding:16px 18px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0;}
   .sidebar-head h2{font-size:14.5px; flex:1;}
   .sidebar-body{padding:6px 18px 18px; overflow-y:auto; flex:1;}
+  .sidebar-section{margin-top:16px; padding-top:16px; border-top:1px solid var(--line);}
+  .sidebar-section:first-child{margin-top:10px; padding-top:0; border-top:none;}
+  .sidebar-section-head{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;}
+  .sidebar-section-head h3{font-size:13px; color:var(--ink); flex:1; margin:0;}
   #suggestionsBody .suggest-label:first-child{margin-top:12px;}
   @media (max-width:880px){
     .layout{flex-direction:column;}
@@ -95,6 +108,13 @@
   .card-head{display:flex; align-items:center; gap:10px; padding:18px 22px 14px; flex-wrap:wrap;}
   .card-head h2{font-size:15.5px; letter-spacing:.01em; color:var(--ink); flex:1;}
   .card-body{padding:0 22px 20px;}
+  @media (max-width:480px){
+    .card-head{padding:15px 16px 12px;}
+    .card-body{padding:0 16px 16px;}
+    .modal-body{padding:16px;}
+    .modal-foot{padding:14px 16px;}
+    .modal-head{padding:14px 16px;}
+  }
 
   html{scroll-behavior:smooth;}
 
@@ -135,6 +155,10 @@
   @media (max-width:560px){
     .hero-clock{font-size:36px;}
     .forecast-card{min-width:56px; padding:10px 6px;}
+    .cal-grid{gap:3px;}
+    .cal-day{min-height:46px; padding:4px;}
+    .cal-dow{font-size:9.5px;}
+    .cal-day .num{font-size:11px;}
   }
 
   /* ===== Calendar ===== */
@@ -149,7 +173,7 @@
   }
   .cal-day:hover{border-color:var(--accent);}
   .cal-day.outside{background:transparent; border-color:transparent;}
-  .cal-day.outside .num{color:#D7D4CC;}
+  .cal-day.outside .num{color:var(--dim);}
   .cal-day.today{border-color:var(--accent); border-width:1.5px;}
   .cal-day.in-trip{border-bottom:2px solid var(--accent-soft);}
   .cal-day .num{font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; color:var(--ink);}
@@ -167,10 +191,10 @@
   #activitiesList .day-group-label:first-child{margin-top:0;}
 
   .activity{border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:7px;}
-  .activity.is-done{background:#FCFCFB;}
+  .activity.is-done{background:rgba(255,255,255,.02);}
   .activity-row{display:flex; align-items:flex-start; gap:12px; padding:12px 14px;}
   .stamp-check{
-    flex-shrink:0; width:21px; height:21px; border-radius:6px; border:1.5px solid #CFCBC2; background:none;
+    flex-shrink:0; width:21px; height:21px; border-radius:6px; border:1.5px solid var(--dim); background:none;
     display:flex; align-items:center; justify-content:center; margin-top:1px; position:relative; transition:border-color .12s, background .12s;
   }
   .stamp-check:hover{border-color:var(--accent);}
@@ -199,7 +223,7 @@
   .toggle-line{display:flex; align-items:center; gap:10px; margin:18px 0 14px; font-size:14px; font-weight:600; color:var(--ink);}
   .switch{position:relative; width:40px; height:23px; flex-shrink:0;}
   .switch input{opacity:0; width:0; height:0;}
-  .slider{position:absolute; inset:0; background:#E2DFD6; border-radius:24px; transition:.2s; cursor:pointer;}
+  .slider{position:absolute; inset:0; background:var(--track); border-radius:24px; transition:.2s; cursor:pointer;}
   .slider::before{content:""; position:absolute; width:17px; height:17px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s;}
   input:checked + .slider{background:var(--success);}
   input:checked + .slider::before{transform:translateX(17px);}
@@ -207,6 +231,8 @@
   @media (max-width:560px){.form-grid{grid-template-columns:1fr;}}
   .field label{display:block; font-size:11.5px; font-weight:600; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
   .field input, .field textarea, .field select{width:100%; padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);}
+  .field input.input-error, .field textarea.input-error{border-color:var(--danger);}
+  .field-error{font-size:12px; color:var(--danger); margin-top:5px;}
   .field input:focus, .field textarea:focus, .field select:focus{outline:none; border-color:var(--accent);}
   .vehicle-summary{margin-top:14px; display:flex; gap:14px; flex-wrap:wrap;}
   .stat-pill{background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 16px;}
@@ -216,13 +242,19 @@
   /* ===== Expenses ===== */
   .exp-row{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
   .exp-row .lbl{width:110px; font-size:13px; font-weight:600; color:var(--ink); flex-shrink:0;}
-  .exp-row .bar-track{flex:1; height:8px; background:#F0EEE8; border-radius:6px; overflow:hidden;}
+  .exp-row .bar-track{flex:1; height:8px; background:var(--track); border-radius:6px; overflow:hidden;}
   .exp-row .bar-fill{height:100%; border-radius:6px;}
   .exp-row .amt{width:100px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600; font-size:13px; flex-shrink:0;}
   .exp-total{margin-top:16px; padding-top:14px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;}
   .exp-total .t-label{font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:var(--ink);}
   .exp-total .t-val{font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; color:var(--accent-dark);}
   .exp-avg{font-size:11.5px; color:var(--muted); margin-top:3px;}
+  @media (max-width:480px){
+    .exp-row{flex-wrap:wrap;}
+    .exp-row .lbl{width:auto; flex:1;}
+    .exp-row .amt{width:auto; order:2;}
+    .exp-row .bar-track{order:3; flex-basis:100%; margin-top:2px;}
+  }
 
   /* ===== Lists ===== */
   .tips-list, .check-list, .info-list{list-style:none; margin:0; padding:0;}
@@ -251,12 +283,12 @@
   .suggestion-main{flex:1; min-width:0;}
   .suggestion-name{font-weight:600; font-size:13.5px; color:var(--ink);}
   .suggestion-meta{font-size:11.5px; color:var(--muted); margin-top:3px;}
-  .suggestion-tips{font-size:12px; color:#5b5d56; margin-top:4px; line-height:1.45;}
+  .suggestion-tips{font-size:12px; color:var(--muted); margin-top:4px; line-height:1.45;}
   .suggestion-row .btn{flex-shrink:0; align-self:flex-start;}
 
   /* ===== Modals ===== */
-  .overlay{position:fixed; inset:0; background:rgba(15,17,15,.5); display:flex; align-items:center; justify-content:center; padding:18px; z-index:200;}
-  .modal{background:var(--surface); border-radius:var(--radius); max-width:520px; width:100%; max-height:88vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.18);}
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.72); display:flex; align-items:center; justify-content:center; padding:18px; z-index:200;}
+  .modal{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); max-width:520px; width:100%; max-height:88vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.5);}
   .modal-head{padding:18px 22px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--surface); z-index:2;}
   .modal-head h3{font-size:17px; color:var(--ink);}
   .modal-body{padding:20px 22px;}
@@ -265,25 +297,25 @@
   .ticket-row{display:flex; gap:8px; margin-bottom:8px; align-items:center;}
   .ticket-row input{flex:1;}
   .ticket-row input.price-input{max-width:110px; flex:none;}
-  .add-ticket-btn{font-size:12.5px; color:var(--accent-dark); background:none; border:1.5px dashed #DDD7C8; border-radius:8px; padding:7px 12px; width:100%; font-weight:600;}
+  .add-ticket-btn{font-size:12.5px; color:var(--accent-dark); background:none; border:1.5px dashed var(--line); border-radius:8px; padding:7px 12px; width:100%; font-weight:600;}
 
   .star-picker{display:flex; gap:5px;}
-  .star-btn{background:none; border:none; font-size:25px; line-height:1; color:#DCD6C7; padding:0; cursor:pointer; transition:color .12s;}
+  .star-btn{background:none; border:none; font-size:25px; line-height:1; color:var(--track); padding:0; cursor:pointer; transition:color .12s;}
   .star-btn.filled{color:#E0A23B;}
   .star-btn:hover{color:#E0A23B;}
   .activity-rating{margin-top:4px; font-size:14px; letter-spacing:1px; line-height:1;}
-  .activity-rating .star-disp{color:#E2DCC8;}
+  .activity-rating .star-disp{color:var(--track);}
   .activity-rating .star-disp.filled{color:#E0A23B;}
-  .activity-comment{font-size:12.5px; color:#5b5d56; margin-top:5px; font-style:italic; line-height:1.5;}
+  .activity-comment{font-size:12.5px; color:var(--muted); margin-top:5px; font-style:italic; line-height:1.5;}
 
   /* ===== Connection banner / toast ===== */
-  #connBanner{background:#FBE3DA; border-bottom:2px solid var(--accent); color:#8C3219; padding:14px 22px; font-size:13.5px; line-height:1.6;}
-  #connBanner .rules-box{background:var(--ink); color:#D8F3DC; font-family:'JetBrains Mono',monospace; font-size:11.5px; padding:12px 14px; border-radius:8px; overflow-x:auto; margin:8px 0; white-space:pre;}
-  #connBanner strong{color:#8C3219;}
+  #connBanner{background:var(--danger-soft); border-bottom:2px solid var(--danger); color:#FFB199; padding:14px 22px; font-size:13.5px; line-height:1.6;}
+  #connBanner .rules-box{background:var(--code-bg); color:#9FE6C0; font-family:'JetBrains Mono',monospace; font-size:11.5px; padding:12px 14px; border-radius:8px; overflow-x:auto; margin:8px 0; white-space:pre;}
+  #connBanner strong{color:#FFB199;}
   #connBanner a{color:var(--ink); font-weight:600;}
   #toast{
-    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff;
-    padding:12px 20px; border-radius:10px; font-size:13.5px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.25);
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--accent); color:#fff;
+    padding:12px 20px; border-radius:10px; font-size:13.5px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.45);
     opacity:0; transition:opacity .25s, transform .25s; z-index:500; pointer-events:none;
   }
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
@@ -340,7 +372,7 @@
             <button class="pill-btn" id="heroSuggestionsPill" type="button">Sugestões</button>
             <a class="pill-btn" href="#vehicleSection">Veículo</a>
             <a class="pill-btn" href="#expensesSection">Gastos</a>
-            <a class="pill-btn" href="#tipsSection">Dicas</a>
+            <button class="pill-btn" id="heroTipsPill" type="button">Dicas</button>
           </div>
           <div class="hero-forecast">
             <div class="hero-forecast-label">Previsão da semana</div>
@@ -410,29 +442,34 @@
         <div class="card-head"><h2>Resumo de gastos</h2></div>
         <div class="card-body" id="expensesBody"></div>
       </div>
-
-      <div class="card" id="tipsSection">
-        <div class="card-head"><h2>Formas de economizar</h2></div>
-        <div class="card-body">
-          <div class="idea-box loading hidden" id="destinationIdeas">Buscando informações sobre o destino...</div>
-          <div id="suggestedTipsBox"></div>
-          <ul class="tips-list" id="tipsList"></ul>
-          <div class="tip-add">
-            <input type="text" id="newTipInput" placeholder="Ex: comprar ingresso online com desconto...">
-            <button class="btn btn-ghost btn-sm" id="addTipBtn">Adicionar</button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="sidebar-wrap" id="sidebarWrap">
-      <button class="sidebar-toggle" id="sidebarToggle" type="button">Sugestões</button>
+      <button class="sidebar-toggle" id="sidebarToggle" type="button">Sugestões e dicas</button>
       <aside class="sidebar" id="suggestionsSidebar">
         <div class="sidebar-head">
-          <h2>Sugestões para o destino</h2>
-          <button class="text-btn" id="refreshSuggestionsBtn">Atualizar</button>
+          <h2>Painel lateral</h2>
+          <button class="text-btn" id="closeSidebarBtn">Fechar</button>
         </div>
-        <div class="sidebar-body" id="suggestionsBody"><p class="no-tickets">Buscando sugestões...</p></div>
+        <div class="sidebar-body">
+          <div class="sidebar-section" id="suggestionsSubsection">
+            <div class="sidebar-section-head">
+              <h3>Sugestões para o destino</h3>
+              <button class="text-btn" id="refreshSuggestionsBtn">Atualizar</button>
+            </div>
+            <div id="suggestionsBody"><p class="no-tickets">Buscando sugestões...</p></div>
+          </div>
+          <div class="sidebar-section" id="tipsSubsection">
+            <div class="sidebar-section-head"><h3>Formas de economizar</h3></div>
+            <div class="idea-box loading hidden" id="destinationIdeas">Buscando informações sobre o destino...</div>
+            <div id="suggestedTipsBox"></div>
+            <ul class="tips-list" id="tipsList"></ul>
+            <div class="tip-add">
+              <input type="text" id="newTipInput" placeholder="Ex: comprar ingresso online com desconto...">
+              <button class="btn btn-ghost btn-sm" id="addTipBtn">Adicionar</button>
+            </div>
+          </div>
+        </div>
       </aside>
     </div>
     </div>
@@ -462,9 +499,9 @@
   <div class="modal">
     <div class="modal-head"><h3 id="activityModalTitle">Nova atividade</h3><button class="text-btn" data-close="activityModalOverlay">Fechar</button></div>
     <div class="modal-body">
-      <div class="field"><label>Nome da atividade *</label><input type="text" id="amName" placeholder="Ex: Snowland"></div>
+      <div class="field"><label>Nome da atividade *</label><input type="text" id="amName" placeholder="Ex: Snowland"><div class="field-error hidden" id="amNameError">Dê um nome para a atividade.</div></div>
       <div class="form-grid">
-        <div class="field"><label>Data *</label><input type="date" id="amDate"></div>
+        <div class="field"><label>Data *</label><input type="date" id="amDate"><div class="field-error hidden" id="amDateError">Escolha uma data para salvar a atividade.</div></div>
         <div class="field"><label>Horário (opcional)</label><input type="time" id="amTime"></div>
       </div>
       <div class="field"><label>Link do local (opcional)</label><input type="url" id="amLink" placeholder="https://..."></div>
@@ -508,7 +545,7 @@
   <div class="modal">
     <div class="modal-head"><h3>Configurações</h3><button class="text-btn" data-close="settingsModalOverlay">Fechar</button></div>
     <div class="modal-body">
-      <p style="font-size:13.5px; color:#555; line-height:1.6;">Seu app está conectado ao projeto Firebase abaixo. Para trocar de projeto, cole uma nova configuração abaixo e reconecte.</p>
+      <p style="font-size:13.5px; color:var(--muted); line-height:1.6;">Seu app está conectado ao projeto Firebase abaixo. Para trocar de projeto, cole uma nova configuração abaixo e reconecte.</p>
       <div class="field"><label>Projeto atual</label><input type="text" id="currentProjectLabel" disabled></div>
       <div class="field"><label>Nova configuração (cole o trecho do Firebase, com ou sem o import)</label><textarea id="newConfigInput" rows="6" placeholder="const firebaseConfig = { apiKey: ... }"></textarea></div>
     </div>
@@ -580,15 +617,21 @@
 
   function setSidebarCollapsed(collapsed){
     $('suggestionsSidebar').classList.toggle('collapsed', collapsed);
+    $('sidebarToggle').textContent = collapsed ? 'Sugestões e dicas' : 'Fechar painel';
     localStorage.setItem('cv_sidebarCollapsed', collapsed ? '1' : '0');
   }
   setSidebarCollapsed(localStorage.getItem('cv_sidebarCollapsed') === '1');
   $('sidebarToggle').addEventListener('click', () => {
     setSidebarCollapsed(!$('suggestionsSidebar').classList.contains('collapsed'));
   });
+  $('closeSidebarBtn').addEventListener('click', () => setSidebarCollapsed(true));
   $('heroSuggestionsPill').addEventListener('click', () => {
     setSidebarCollapsed(false);
-    $('suggestionsSidebar').scrollIntoView({ behavior:'smooth', block:'start' });
+    $('suggestionsSubsection').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  $('heroTipsPill').addEventListener('click', () => {
+    setSidebarCollapsed(false);
+    $('tipsSubsection').scrollIntoView({ behavior:'smooth', block:'start' });
   });
 
   function showConnError(){
@@ -1319,7 +1362,8 @@ service cloud.firestore {
     body.innerHTML = renderGroup('Atrações', groups.atracao) + renderGroup('Restaurantes', groups.restaurante) + renderGroup('Sugestões encontradas', groups.geral);
     qsa('[data-add-suggestion]').forEach(btn => btn.addEventListener('click', () => {
       const s = list[parseInt(btn.dataset.addSuggestion)];
-      openActivityModal(null, null, s);
+      const t = currentTrip();
+      openActivityModal(null, (t && t.startDate) || '', s);
     }));
   }
 
@@ -1541,6 +1585,10 @@ service cloud.firestore {
 
   function openActivityModal(activity, prefillDate, prefill){
     editingActivityId = activity ? activity.id : null;
+    $('amName').classList.remove('input-error');
+    $('amNameError').classList.add('hidden');
+    $('amDate').classList.remove('input-error');
+    $('amDateError').classList.add('hidden');
     $('activityModalTitle').textContent = activity ? 'Editar atividade' : 'Nova atividade';
     $('amName').value = activity ? activity.name||'' : (prefill ? prefill.name||'' : '');
     $('amDate').value = activity ? activity.date||'' : (prefillDate || '');
@@ -1569,7 +1617,11 @@ service cloud.firestore {
   $('saveActivityBtn').addEventListener('click', async () => {
     const name = $('amName').value.trim();
     const date = $('amDate').value;
-    if(!name || !date){ showToast('Preencha nome e data da atividade.'); return; }
+    $('amName').classList.toggle('input-error', !name);
+    $('amNameError').classList.toggle('hidden', !!name);
+    $('amDate').classList.toggle('input-error', !date);
+    $('amDateError').classList.toggle('hidden', !!date);
+    if(!name || !date){ showToast('Preencha os campos marcados em vermelho.'); return; }
     const priceVal = $('amPrice').value;
     const ticketOptions = qsa('.ticket-row').map(row => ({
       label: row.querySelector('.tk-label').value.trim(),
@@ -1737,8 +1789,8 @@ service cloud.firestore {
 
     body.innerHTML = `
       ${bar('Atividades', actTotal, 'var(--accent)')}
-      ${bar('Veículo', vehicleTotal, 'var(--ink)')}
-      ${bar('Gasolina', gasTotal, '#C9C4B4')}
+      ${bar('Veículo', vehicleTotal, 'var(--success)')}
+      ${bar('Gasolina', gasTotal, 'var(--muted)')}
       <div class="exp-total">
         <div>
           <div class="t-label">Total geral da viagem</div>
