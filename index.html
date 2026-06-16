@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronograma de Viagens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15191C; --paper:#FAFAF7; --surface:#FFFFFF; --line:#EAE7E1; --muted:#878a82;
+    --accent:#D6643A; --accent-dark:#B84F2B; --accent-soft:#FBEAE2;
+    --success:#1F8A5F; --success-soft:#E3F3EA;
+    --radius:14px; --radius-sm:9px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Work Sans',sans-serif; background:var(--paper); color:var(--ink);
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  .hidden{display:none !important;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; font-weight:600; margin:0;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:var(--accent-dark);}
+  button{font-family:inherit; cursor:pointer;}
+  input,select,textarea{font-family:'Work Sans',sans-serif; font-size:14px;}
+
+  header.appbar{
+    background:var(--surface); border-bottom:1px solid var(--line); color:var(--ink);
+    padding:14px 22px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:50;
+  }
+  header.appbar .brand{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink);}
+  .spacer{flex:1;}
+  .trip-picker{display:flex; align-items:center; gap:8px;}
+  select#tripSelect{
+    background:var(--paper); color:var(--ink); border:1px solid var(--line);
+    border-radius:8px; padding:8px 12px; font-size:13.5px; min-width:170px; max-width:230px;
+  }
+  .btn{
+    border:none; border-radius:9px; padding:9px 14px; font-size:13.5px; font-weight:600;
+    display:inline-flex; align-items:center; gap:6px; transition:opacity .12s; white-space:nowrap;
+  }
+  .btn:hover{opacity:.85;}
+  .btn:active{opacity:.7;}
+  .btn-accent{background:var(--accent); color:#fff;}
+  .btn-ghost{background:transparent; border:1.5px solid var(--line); color:var(--ink);}
+  .btn-ghost:hover{border-color:var(--accent); color:var(--accent-dark); opacity:1;}
+  .btn-sm{padding:5px 10px; font-size:12px; border-radius:7px;}
+  .text-btn{
+    background:transparent; border:none; color:var(--muted); font-size:12.5px; font-weight:600;
+    padding:5px 9px; border-radius:7px; transition:background .12s, color .12s;
+  }
+  .text-btn:hover{background:var(--accent-soft); color:var(--accent-dark);}
+  .text-btn.danger:hover{background:#FBE3DA; color:#B0392A;}
+  .text-btn.on-dark{color:rgba(255,255,255,.85);}
+  .text-btn.on-dark:hover{background:rgba(255,255,255,.18); color:#fff;}
+
+  main{max-width:920px; margin:0 auto; padding:24px 18px 60px;}
+
+  .empty-state{text-align:center; padding:80px 24px; color:var(--muted);}
+  .empty-state h2{color:var(--ink); font-size:23px; margin:0 0 8px;}
+  .empty-state p{max-width:420px; margin:0 auto 20px; font-size:14.5px; line-height:1.6;}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:18px; overflow:hidden;}
+  .card-head{display:flex; align-items:center; gap:10px; padding:18px 22px 14px; flex-wrap:wrap;}
+  .card-head h2{font-size:15.5px; letter-spacing:.01em; color:var(--ink); flex:1;}
+  .card-body{padding:0 22px 20px;}
+
+  html{scroll-behavior:smooth;}
+
+  /* ===== Hero ===== */
+  .trip-hero{
+    position:relative; border-radius:var(--radius); overflow:hidden; margin-bottom:18px;
+    background:linear-gradient(135deg,#22262A,#3A3F38);
+  }
+  .hero-img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .5s ease;}
+  .hero-img.loaded{opacity:1;}
+  .hero-scrim{position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,12,10,.30) 0%, rgba(10,12,10,.62) 100%);}
+  .hero-content{position:relative; z-index:2; width:100%; padding:26px 26px 22px; color:#fff;}
+  .hero-top{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap;}
+  .hero-time-block{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
+  .hero-clock{font-family:'JetBrains Mono',monospace; font-size:46px; font-weight:600; line-height:1;}
+  .hero-weather-now{display:flex; align-items:center; gap:6px; font-size:17px; font-weight:500;}
+  .hero-subtitle{font-size:13px; opacity:.85; margin-top:6px;}
+  .hero-actions{display:flex; gap:6px; flex-shrink:0;}
+  .pill-btn{
+    background:rgba(255,255,255,.14); color:#fff; border:none; border-radius:20px; padding:8px 16px;
+    font-size:12.5px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; white-space:nowrap;
+  }
+  .pill-btn:hover{background:rgba(255,255,255,.26); opacity:1;}
+  .hero-actions .pill-btn{padding:6px 12px; font-size:11.5px; background:rgba(255,255,255,.12);}
+  .hero-notification{display:flex; align-items:center; gap:8px; font-size:13px; margin-top:16px; opacity:.95; min-height:14px;}
+  .hero-notification .nbadge{background:rgba(255,255,255,.18); border-radius:6px; padding:2px 8px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-family:'JetBrains Mono',monospace;}
+  .hero-pills{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;}
+  .hero-forecast{margin-top:22px;}
+  .hero-forecast-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; opacity:.85; margin-bottom:10px;}
+  .hero-forecast-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px;}
+  .forecast-card{
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:12px;
+    padding:13px 8px; min-width:64px; text-align:center; flex-shrink:0; backdrop-filter:blur(6px); color:#fff;
+  }
+  .forecast-card .ftemp{font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:600;}
+  .forecast-card .ficon{margin:8px auto; display:block;}
+  .forecast-card .fday{font-size:10px; text-transform:uppercase; letter-spacing:.04em; opacity:.85; margin-top:2px;}
+  @media (max-width:560px){
+    .hero-clock{font-size:36px;}
+    .forecast-card{min-width:56px; padding:10px 6px;}
+  }
+
+  /* ===== Calendar ===== */
+  .cal-nav{display:flex; align-items:center; gap:10px;}
+  .cal-nav .label{font-weight:600; color:var(--ink); min-width:120px; text-align:center; font-family:'Space Grotesk',sans-serif; font-size:14px;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+  .cal-dow{text-align:center; font-size:10.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; padding-bottom:6px;}
+  .cal-day{
+    min-height:58px; border:1px solid var(--line); border-radius:9px; padding:6px; position:relative;
+    background:var(--surface); cursor:pointer; transition:border-color .12s;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .cal-day:hover{border-color:var(--accent);}
+  .cal-day.outside{background:transparent; border-color:transparent;}
+  .cal-day.outside .num{color:#D7D4CC;}
+  .cal-day.today{border-color:var(--accent); border-width:1.5px;}
+  .cal-day.in-trip{border-bottom:2px solid var(--accent-soft);}
+  .cal-day .num{font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; color:var(--ink);}
+  .cal-dots{display:flex; align-items:center; gap:4px;}
+  .cal-dot{width:7px; height:7px; border-radius:50%; border:1.5px solid var(--accent); background:transparent;}
+  .cal-dot.done{background:var(--success); border-color:var(--success);}
+  .cal-count{font-size:9.5px; color:var(--muted); font-family:'JetBrains Mono',monospace;}
+
+  /* ===== Activities ===== */
+  .day-group-label{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:500; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.07em; margin:18px 0 8px; display:flex; align-items:center; gap:8px;
+  }
+  .day-group-label::after{content:""; flex:1; height:1px; background:var(--line);}
+  #activitiesList .day-group-label:first-child{margin-top:0;}
+
+  .activity{border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:7px;}
+  .activity.is-done{background:#FCFCFB;}
+  .activity-row{display:flex; align-items:flex-start; gap:12px; padding:12px 14px;}
+  .stamp-check{
+    flex-shrink:0; width:21px; height:21px; border-radius:6px; border:1.5px solid #CFCBC2; background:none;
+    display:flex; align-items:center; justify-content:center; margin-top:1px; position:relative; transition:border-color .12s, background .12s;
+  }
+  .stamp-check:hover{border-color:var(--accent);}
+  .stamp-check.checked{background:var(--success); border-color:var(--success);}
+  .stamp-check.checked::after{
+    content:""; position:absolute; width:8px; height:4px; border-left:2px solid #fff; border-bottom:2px solid #fff;
+    transform:rotate(-45deg) translate(0,-1px);
+  }
+  .activity-main{flex:1; min-width:0;}
+  .activity-name{font-weight:600; font-size:14.5px; color:var(--ink);}
+  .activity.is-done .activity-name{color:var(--muted); text-decoration:line-through;}
+  .activity-meta{font-size:12.5px; color:var(--muted); margin-top:4px;}
+  .activity-meta .dot{margin:0 6px; opacity:.6;}
+  .activity-meta a{color:var(--accent-dark); text-decoration:none; font-weight:600;}
+  .activity-actions{display:flex; gap:2px; flex-shrink:0;}
+  .ticket-toggle{font-size:12px; color:var(--accent-dark); background:none; border:none; padding:6px 0 0; font-weight:600;}
+  .ticket-panel{padding:0 14px 14px 47px; display:none;}
+  .ticket-panel.open{display:block;}
+  .ticket-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .ticket-table td{padding:5px 8px; border-bottom:1px solid var(--line);}
+  .ticket-table tr:last-child td{border-bottom:none;}
+  .ticket-table td.tprice{font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600;}
+  .no-tickets{font-size:12.5px; color:var(--muted); padding-top:2px;}
+
+  /* ===== Vehicle ===== */
+  .toggle-line{display:flex; align-items:center; gap:10px; margin:18px 0 14px; font-size:14px; font-weight:600; color:var(--ink);}
+  .switch{position:relative; width:40px; height:23px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{position:absolute; inset:0; background:#E2DFD6; border-radius:24px; transition:.2s; cursor:pointer;}
+  .slider::before{content:""; position:absolute; width:17px; height:17px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s;}
+  input:checked + .slider{background:var(--success);}
+  input:checked + .slider::before{transform:translateX(17px);}
+  .form-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:14px;}
+  @media (max-width:560px){.form-grid{grid-template-columns:1fr;}}
+  .field label{display:block; font-size:11.5px; font-weight:600; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
+  .field input, .field textarea, .field select{width:100%; padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);}
+  .field input:focus, .field textarea:focus, .field select:focus{outline:none; border-color:var(--accent);}
+  .vehicle-summary{margin-top:14px; display:flex; gap:14px; flex-wrap:wrap;}
+  .stat-pill{background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 16px;}
+  .stat-pill .v{font-family:'JetBrains Mono',monospace; font-weight:600; font-size:16px; color:var(--ink);}
+  .stat-pill .l{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+
+  /* ===== Expenses ===== */
+  .exp-row{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+  .exp-row .lbl{width:110px; font-size:13px; font-weight:600; color:var(--ink); flex-shrink:0;}
+  .exp-row .bar-track{flex:1; height:8px; background:#F0EEE8; border-radius:6px; overflow:hidden;}
+  .exp-row .bar-fill{height:100%; border-radius:6px;}
+  .exp-row .amt{width:100px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600; font-size:13px; flex-shrink:0;}
+  .exp-total{margin-top:16px; padding-top:14px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;}
+  .exp-total .t-label{font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; color:var(--ink);}
+  .exp-total .t-val{font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; color:var(--accent-dark);}
+  .exp-avg{font-size:11.5px; color:var(--muted); margin-top:3px;}
+
+  /* ===== Lists ===== */
+  .tips-list, .check-list, .info-list{list-style:none; margin:0; padding:0;}
+  .tips-list li, .check-list li{display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .tips-list li:last-child, .check-list li:last-child{border-bottom:none;}
+  .tips-list li .bullet{width:5px; height:5px; border-radius:50%; background:var(--accent); flex-shrink:0; margin-top:7px;}
+  .tips-list li .txt{flex:1;}
+  .tip-add{display:flex; gap:8px; margin-top:12px;}
+  .tip-add input{flex:1;}
+  .info-list li{display:flex; justify-content:space-between; gap:14px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .info-list li:last-child{border-bottom:none;}
+  .info-list .ilabel{color:var(--muted); font-weight:600;}
+  .info-list .ivalue{text-align:right;}
+  .check-list li .txt.packed{color:var(--muted); text-decoration:line-through;}
+
+  /* ===== Destination ideas (live lookup) ===== */
+  .idea-box{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px 16px; margin:16px 0; font-size:13px; line-height:1.6; color:var(--ink);}
+  .idea-box .idea-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;}
+  .idea-box .idea-src{margin-top:8px; font-size:12px;}
+  .idea-box.loading, .idea-box.empty{color:var(--muted); font-style:italic;}
+  .suggest-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .suggest-row:last-child{border-bottom:none;}
+  .suggest-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:18px 0 4px;}
+
+  /* ===== Modals ===== */
+  .overlay{position:fixed; inset:0; background:rgba(15,17,15,.5); display:flex; align-items:center; justify-content:center; padding:18px; z-index:200;}
+  .modal{background:var(--surface); border-radius:var(--radius); max-width:520px; width:100%; max-height:88vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.18);}
+  .modal-head{padding:18px 22px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--surface); z-index:2;}
+  .modal-head h3{font-size:17px; color:var(--ink);}
+  .modal-body{padding:20px 22px;}
+  .modal-foot{padding:16px 22px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px;}
+  .field{margin-bottom:14px;}
+  .ticket-row{display:flex; gap:8px; margin-bottom:8px; align-items:center;}
+  .ticket-row input{flex:1;}
+  .ticket-row input.price-input{max-width:110px; flex:none;}
+  .add-ticket-btn{font-size:12.5px; color:var(--accent-dark); background:none; border:1.5px dashed #DDD7C8; border-radius:8px; padding:7px 12px; width:100%; font-weight:600;}
+
+  /* ===== Connection banner / toast ===== */
+  #connBanner{background:#FBE3DA; border-bottom:2px solid var(--accent); color:#8C3219; padding:14px 22px; font-size:13.5px; line-height:1.6;}
+  #connBanner .rules-box{background:var(--ink); color:#D8F3DC; font-family:'JetBrains Mono',monospace; font-size:11.5px; padding:12px 14px; border-radius:8px; overflow-x:auto; margin:8px 0; white-space:pre;}
+  #connBanner strong{color:#8C3219;}
+  #connBanner a{color:var(--ink); font-weight:600;}
+  #toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff;
+    padding:12px 20px; border-radius:10px; font-size:13.5px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.25);
+    opacity:0; transition:opacity .25s, transform .25s; z-index:500; pointer-events:none;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div id="app" class="hidden">
+  <div id="connBanner" class="hidden"></div>
+  <header class="appbar">
+    <div class="brand">Cronograma de Viagens</div>
+    <div class="spacer"></div>
+    <div class="trip-picker">
+      <select id="tripSelect"><option value="">Carregando...</option></select>
+      <button class="btn btn-accent" id="newTripBtn">Nova viagem</button>
+    </div>
+    <button class="btn btn-ghost" id="settingsBtn">Configurações</button>
+  </header>
+
+  <main>
+    <div id="noTripState" class="empty-state hidden">
+      <h2>Nenhuma viagem por aqui ainda</h2>
+      <p>Crie sua primeira viagem para começar a montar o cronograma, ou carregue o exemplo de Gramado já pronto.</p>
+      <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <button class="btn btn-accent" id="emptyNewTripBtn">Criar viagem</button>
+        <button class="btn btn-ghost" id="seedBtn">Carregar exemplo: Gramado</button>
+      </div>
+    </div>
+
+    <div id="tripView" class="hidden">
+      <div class="trip-hero" id="tripHero">
+        <img id="tripHeroImg" class="hero-img" alt="">
+        <div class="hero-scrim"></div>
+        <div class="hero-content">
+          <div class="hero-top">
+            <div>
+              <div class="hero-time-block">
+                <div class="hero-clock" id="localClock">--:--</div>
+                <div class="hero-weather-now" id="weatherNow"></div>
+              </div>
+              <div class="hero-subtitle" id="heroSubtitle">—</div>
+            </div>
+            <div class="hero-actions">
+              <button class="pill-btn" id="editTripBtn">Editar</button>
+              <button class="pill-btn" id="refreshHeroBtn">Trocar imagem</button>
+              <button class="pill-btn" id="deleteTripBtn">Excluir</button>
+            </div>
+          </div>
+          <div class="hero-notification" id="heroNotification"></div>
+          <div class="hero-pills">
+            <a class="pill-btn" href="#calendarSection">Calendário</a>
+            <a class="pill-btn" href="#activitiesSection">Atividades</a>
+            <a class="pill-btn" href="#vehicleSection">Veículo</a>
+            <a class="pill-btn" href="#expensesSection">Gastos</a>
+            <a class="pill-btn" href="#tipsSection">Dicas</a>
+          </div>
+          <div class="hero-forecast">
+            <div class="hero-forecast-label">Previsão da semana</div>
+            <div class="hero-forecast-row" id="weatherForecastRow"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Informações gerais</h2></div>
+        <div class="card-body"><ul class="info-list" id="generalInfoList"></ul></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>O que levar</h2></div>
+        <div class="card-body">
+          <ul class="check-list" id="packingList"></ul>
+          <div class="tip-add">
+            <input type="text" id="newPackInput" placeholder="Adicionar item à lista...">
+            <button class="btn btn-ghost btn-sm" id="addPackBtn">Adicionar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="calendarSection">
+        <div class="card-head">
+          <h2>Calendário de atividades</h2>
+          <div class="cal-nav">
+            <button class="text-btn" id="calPrev">Anterior</button>
+            <span class="label" id="calLabel">—</span>
+            <button class="text-btn" id="calNext">Próximo</button>
+          </div>
+        </div>
+        <div class="card-body"><div class="cal-grid" id="calGrid"></div></div>
+      </div>
+
+      <div class="card" id="activitiesSection">
+        <div class="card-head">
+          <h2>Atividades</h2>
+          <button class="btn btn-accent btn-sm" id="addActivityBtn">Adicionar atividade</button>
+        </div>
+        <div class="card-body" id="activitiesList"><p class="no-tickets">Nenhuma atividade cadastrada ainda.</p></div>
+      </div>
+
+      <div class="card" id="vehicleSection">
+        <div class="card-head"><h2>Locação de veículo</h2></div>
+        <div class="card-body">
+          <label class="toggle-line">
+            <span class="switch"><input type="checkbox" id="vehicleEnabled"><span class="slider"></span></span>
+            Tenho aluguel de veículo nesta viagem
+          </label>
+          <div id="vehicleFields" class="hidden">
+            <div class="form-grid">
+              <div class="field"><label>Locadora / empresa</label><input type="text" id="vCompany" placeholder="Ex: Localiza, Movida..."></div>
+              <div class="field"><label>Dias de uso</label><input type="number" id="vDays" min="0" placeholder="0"></div>
+              <div class="field"><label>Valor total pago (R$)</label><input type="number" id="vTotal" min="0" step="0.01" placeholder="0,00"></div>
+              <div class="field"><label>Gasto com gasolina (R$)</label><input type="number" id="vGas" min="0" step="0.01" placeholder="0,00"></div>
+            </div>
+            <div class="field"><label>Observações</label><textarea id="vNotes" rows="2" placeholder="Ex: retirada no aeroporto, seguro incluso..."></textarea></div>
+            <div class="vehicle-summary" id="vehicleSummary"></div>
+          </div>
+          <div style="margin-top:14px; text-align:right;"><button class="btn btn-accent btn-sm" id="saveVehicleBtn">Salvar locação</button></div>
+        </div>
+      </div>
+
+      <div class="card" id="expensesSection">
+        <div class="card-head"><h2>Resumo de gastos</h2></div>
+        <div class="card-body" id="expensesBody"></div>
+      </div>
+
+      <div class="card" id="tipsSection">
+        <div class="card-head"><h2>Formas de economizar</h2></div>
+        <div class="card-body">
+          <div class="idea-box loading hidden" id="destinationIdeas">Buscando informações sobre o destino...</div>
+          <div id="suggestedTipsBox"></div>
+          <ul class="tips-list" id="tipsList"></ul>
+          <div class="tip-add">
+            <input type="text" id="newTipInput" placeholder="Ex: comprar ingresso online com desconto...">
+            <button class="btn btn-ghost btn-sm" id="addTipBtn">Adicionar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay hidden" id="tripModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="tripModalTitle">Nova viagem</h3><button class="text-btn" data-close="tripModalOverlay">Fechar</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Nome da viagem *</label><input type="text" id="tmName" placeholder="Ex: Gramado, RS"></div>
+      <div class="field"><label>Destino</label><input type="text" id="tmDestination" placeholder="Ex: Gramado, Rio Grande do Sul"></div>
+      <div class="form-grid">
+        <div class="field"><label>Data de início *</label><input type="date" id="tmStart"></div>
+        <div class="field"><label>Data de fim *</label><input type="date" id="tmEnd"></div>
+      </div>
+      <div class="field"><label>Hospedagem / hotel</label><input type="text" id="tmHotel" placeholder="Ex: Hotel Alpestre"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="tripModalOverlay">Cancelar</button>
+      <button class="btn btn-accent" id="saveTripBtn">Salvar viagem</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="activityModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="activityModalTitle">Nova atividade</h3><button class="text-btn" data-close="activityModalOverlay">Fechar</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Nome da atividade *</label><input type="text" id="amName" placeholder="Ex: Snowland"></div>
+      <div class="form-grid">
+        <div class="field"><label>Data *</label><input type="date" id="amDate"></div>
+        <div class="field"><label>Horário (opcional)</label><input type="time" id="amTime"></div>
+      </div>
+      <div class="field"><label>Link do local (opcional)</label><input type="url" id="amLink" placeholder="https://..."></div>
+      <div class="field"><label>Preço do ingresso — estimativa principal (opcional)</label><input type="number" id="amPrice" min="0" step="0.01" placeholder="0,00"></div>
+      <div class="field">
+        <label>Ingressos possíveis e preços</label>
+        <div id="ticketRows"></div>
+        <button type="button" class="add-ticket-btn" id="addTicketBtn">Adicionar opção de ingresso</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="activityModalOverlay">Cancelar</button>
+      <button class="btn btn-accent" id="saveActivityBtn">Salvar atividade</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="dayModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="dayModalTitle">Dia</h3><button class="text-btn" data-close="dayModalOverlay">Fechar</button></div>
+    <div class="modal-body" id="dayModalBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="dayModalOverlay">Fechar</button>
+      <button class="btn btn-accent" id="dayAddActivityBtn">Adicionar atividade neste dia</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="settingsModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Configurações</h3><button class="text-btn" data-close="settingsModalOverlay">Fechar</button></div>
+    <div class="modal-body">
+      <p style="font-size:13.5px; color:#555; line-height:1.6;">Seu app está conectado ao projeto Firebase abaixo. Para trocar de projeto, cole uma nova configuração abaixo e reconecte.</p>
+      <div class="field"><label>Projeto atual</label><input type="text" id="currentProjectLabel" disabled></div>
+      <div class="field"><label>Nova configuração (cole o trecho do Firebase, com ou sem o import)</label><textarea id="newConfigInput" rows="6" placeholder="const firebaseConfig = { apiKey: ... }"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close="settingsModalOverlay">Fechar</button>
+      <button class="btn btn-accent" id="reconnectBtn">Reconectar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     UTILITIES
+  ============================================================ */
+  const $ = (id) => document.getElementById(id);
+  const qsa = (sel, root) => Array.from((root||document).querySelectorAll(sel));
+
+  function escapeHtml(str){
+    if(str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function formatBRL(n){
+    n = Number(n) || 0;
+    return n.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+  }
+  function parseISO(iso){
+    if(!iso) return null;
+    const [y,m,d] = iso.split('-').map(Number);
+    return new Date(y, m-1, d);
+  }
+  function toISO(date){
+    const y = date.getFullYear(), m = String(date.getMonth()+1).padStart(2,'0'), d = String(date.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  function formatDateBR(iso){
+    const d = parseISO(iso);
+    if(!d) return '—';
+    const dias = ['dom','seg','ter','qua','qui','sex','sáb'];
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} - ${dias[d.getDay()]}`;
+  }
+  function formatDateRangeBR(startIso, endIso){
+    if(!startIso || !endIso) return '—';
+    const s = parseISO(startIso), e = parseISO(endIso);
+    return `${String(s.getDate()).padStart(2,'0')}/${String(s.getMonth()+1).padStart(2,'0')} a ${String(e.getDate()).padStart(2,'0')}/${String(e.getMonth()+1).padStart(2,'0')}`;
+  }
+  function tripDayCount(startIso, endIso){
+    if(!startIso || !endIso) return null;
+    const s = parseISO(startIso), e = parseISO(endIso);
+    return Math.round((e - s) / 86400000) + 1;
+  }
+  function showToast(msg){
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(()=> t.classList.remove('show'), 2600);
+  }
+  function openModal(id){ $(id).classList.remove('hidden'); }
+  function closeModal(id){ $(id).classList.add('hidden'); }
+  qsa('[data-close]').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.close)));
+  qsa('.overlay').forEach(ov => ov.addEventListener('click', (e) => { if(e.target === ov) ov.classList.add('hidden'); }));
+
+  function showConnError(){
+    const banner = $('connBanner');
+    banner.classList.remove('hidden');
+    banner.innerHTML = `
+      <strong>Não consegui ler/gravar no banco de dados.</strong> Confira no projeto <strong>${escapeHtml((DEFAULT_FIREBASE_CONFIG||{}).projectId||'')}</strong> do Firebase:<br>
+      1. Em "Firestore Database", clique em <strong>Criar banco de dados</strong> se ainda não existir (modo produção, qualquer região).<br>
+      2. Na aba <strong>Regras</strong>, publique exatamente isto:
+      <div class="rules-box">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</div>
+      Depois de publicar as regras, é só recarregar esta página.
+    `;
+  }
+  function clearConnError(){ $('connBanner').classList.add('hidden'); }
+
+  /* ============================================================
+     STATE
+  ============================================================ */
+  let db = null;
+  let trips = [];
+  let activities = [];
+  let currentTripId = null;
+  let unsubActivities = null;
+  let calendarViewDate = new Date();
+  let editingActivityId = null;
+  let dayModalDate = null;
+  let autoSeedAttempted = false;
+  const heroFetchInFlight = new Set();
+  const ideasFetchInFlight = new Set();
+
+  const DEFAULT_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDD7a7aI3F3m3lhg4h6S9o6cbxs21rTK8Q",
+    authDomain: "cronogramadeviagens.firebaseapp.com",
+    projectId: "cronogramadeviagens",
+    storageBucket: "cronogramadeviagens.firebasestorage.app",
+    messagingSenderId: "151099984652",
+    appId: "1:151099984652:web:756e75877cba6a79739729",
+    measurementId: "G-KDTE1J84MM"
+  };
+
+  const GENERIC_BUDGET_TIPS = [
+    'Compare preços de hospedagem em datas próximas - alguns dias da semana saem mais baratos.',
+    'Procure passeios e atrações com desconto para compra antecipada online.',
+    'Prefira restaurantes mais afastados do ponto turístico principal - tendem a ser mais baratos.',
+    'Use transporte público ou apps de carona quando possível, em vez de táxi o tempo todo.',
+    'Verifique se a hospedagem tem cozinha - preparar algumas refeições economiza bastante.',
+    'Procure passeios gratuitos: parques, mirantes e centros históricos costumam ser de graça.',
+    'Defina um orçamento diário e acompanhe os gastos para não ter surpresas no fim da viagem.',
+    'Evite trocar dinheiro ou usar o cartão em casas de câmbio de aeroporto - as taxas são piores.',
+  ];
+
+  /* ============================================================
+     FIREBASE INIT
+  ============================================================ */
+  function tryEval(snippet){
+    try{
+      const obj = new Function('"use strict"; return (' + snippet + ');')();
+      if(obj && obj.apiKey && obj.projectId) return obj;
+    }catch(e){}
+    return null;
+  }
+  function parseConfigText(text){
+    text = text.trim();
+    if(!text) throw new Error('vazio');
+    let result = tryEval(text);
+    if(result) return result;
+    const keyIdx = text.indexOf('apiKey');
+    if(keyIdx !== -1){
+      const openIdx = text.lastIndexOf('{', keyIdx);
+      if(openIdx !== -1){
+        let depth = 0, end = -1;
+        for(let i = openIdx; i < text.length; i++){
+          if(text[i] === '{') depth++;
+          else if(text[i] === '}'){ depth--; if(depth === 0){ end = i; break; } }
+        }
+        if(end !== -1){
+          result = tryEval(text.slice(openIdx, end + 1));
+          if(result) return result;
+        }
+      }
+    }
+    throw new Error('parse-failed');
+  }
+
+  function initFirebase(config){
+    try{ if(firebase.apps.length){ firebase.app().delete().catch(()=>{}); } }catch(e){}
+    firebase.initializeApp(config);
+    db = firebase.firestore();
+    localStorage.setItem('cv_firebaseConfig', JSON.stringify(config));
+    $('app').classList.remove('hidden');
+    $('currentProjectLabel').value = config.projectId || '';
+    listenTrips();
+  }
+
+  function tryAutoConnect(){
+    let config = DEFAULT_FIREBASE_CONFIG;
+    const saved = localStorage.getItem('cv_firebaseConfig');
+    if(saved){
+      try{ config = JSON.parse(saved); }catch(e){}
+    }
+    initFirebase(config);
+  }
+
+  $('settingsBtn').addEventListener('click', () => openModal('settingsModalOverlay'));
+  $('reconnectBtn').addEventListener('click', () => {
+    const text = $('newConfigInput').value;
+    try{
+      const config = parseConfigText(text);
+      closeModal('settingsModalOverlay');
+      currentTripId = null;
+      initFirebase(config);
+      showToast('Reconectado a novo projeto Firebase.');
+    }catch(e){
+      alert('Não consegui ler essa configuração. Confira se copiou o trecho completo.');
+    }
+  });
+
+  /* ============================================================
+     TRIPS
+  ============================================================ */
+  function listenTrips(){
+    db.collection('trips').onSnapshot(snap => {
+      clearConnError();
+      trips = [];
+      snap.forEach(doc => trips.push({ id: doc.id, ...doc.data() }));
+      trips.sort((a,b) => (a.startDate||'').localeCompare(b.startDate||''));
+      renderTripSelector();
+      if(trips.length === 0){
+        currentTripId = null;
+        showNoTripState();
+        if(!autoSeedAttempted && !localStorage.getItem('cv_autoseed_done')){
+          autoSeedAttempted = true;
+          seedGramadoTrip().then(success => {
+            if(success){ localStorage.setItem('cv_autoseed_done','1'); }
+            else { autoSeedAttempted = false; }
+          });
+        }
+      } else if(!currentTripId || !trips.find(t => t.id === currentTripId)){
+        selectTrip(trips[0].id);
+      } else {
+        renderTripHero();
+      }
+    }, err => {
+      console.error(err);
+      showConnError();
+      showToast('Erro ao carregar viagens.');
+    });
+  }
+
+  function renderTripSelector(){
+    const sel = $('tripSelect');
+    sel.innerHTML = '';
+    if(trips.length === 0){
+      sel.innerHTML = '<option value="">Nenhuma viagem</option>';
+      return;
+    }
+    trips.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name || 'Sem nome';
+      if(t.id === currentTripId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+  $('tripSelect').addEventListener('change', (e) => selectTrip(e.target.value));
+
+  function showNoTripState(){
+    $('noTripState').classList.remove('hidden');
+    $('tripView').classList.add('hidden');
+  }
+
+  function selectTrip(tripId){
+    currentTripId = tripId;
+    if(!tripId){ showNoTripState(); return; }
+    $('noTripState').classList.add('hidden');
+    $('tripView').classList.remove('hidden');
+    renderTripSelector();
+    renderTripHero();
+    const t = trips.find(x => x.id === tripId);
+    if(t && t.startDate){ calendarViewDate = parseISO(t.startDate); }
+    listenActivities(tripId);
+  }
+
+  function currentTrip(){ return trips.find(t => t.id === currentTripId) || null; }
+
+  function renderTripHero(){
+    const t = currentTrip();
+    if(!t) return;
+    $('heroSubtitle').textContent = `${t.name || 'Sem nome'} · ${formatDateRangeBR(t.startDate, t.endDate)} · ${t.hotel || 'Hospedagem não definida'}`;
+    const v = t.vehicle || {};
+    $('vehicleEnabled').checked = !!v.enabled;
+    $('vehicleFields').classList.toggle('hidden', !v.enabled);
+    $('vCompany').value = v.company || '';
+    $('vDays').value = v.daysUsed ?? '';
+    $('vTotal').value = v.totalPaid ?? '';
+    $('vGas').value = v.gasExpense ?? '';
+    $('vNotes').value = v.notes || '';
+    renderVehicleSummary();
+    renderTips();
+    renderGeneralInfo();
+    renderPackingList();
+    renderExpenses();
+    renderHeroNotification();
+    ensureHeroImage(t);
+    ensureDestinationIdeas(t);
+    startLocalClock(t);
+    ensureWeather(t);
+  }
+
+  let editingTripId = null;
+  function openTripModal(trip){
+    editingTripId = trip ? trip.id : null;
+    $('tripModalTitle').textContent = trip ? 'Editar viagem' : 'Nova viagem';
+    $('tmName').value = trip ? (trip.name||'') : '';
+    $('tmDestination').value = trip ? (trip.destination||'') : '';
+    $('tmStart').value = trip ? (trip.startDate||'') : '';
+    $('tmEnd').value = trip ? (trip.endDate||'') : '';
+    $('tmHotel').value = trip ? (trip.hotel||'') : '';
+    openModal('tripModalOverlay');
+  }
+  $('newTripBtn').addEventListener('click', () => openTripModal(null));
+  $('emptyNewTripBtn').addEventListener('click', () => openTripModal(null));
+  $('editTripBtn').addEventListener('click', () => openTripModal(currentTrip()));
+
+  $('saveTripBtn').addEventListener('click', async () => {
+    const name = $('tmName').value.trim();
+    const start = $('tmStart').value;
+    const end = $('tmEnd').value;
+    if(!name || !start || !end){
+      showToast('Preencha nome, data de início e data de fim.');
+      return;
+    }
+    const prevTrip = editingTripId ? trips.find(t=>t.id===editingTripId) : null;
+    const destinationChanged = prevTrip && prevTrip.destination !== $('tmDestination').value.trim();
+    const data = {
+      name, destination: $('tmDestination').value.trim(),
+      startDate: start, endDate: end, hotel: $('tmHotel').value.trim(),
+    };
+    if(destinationChanged){
+      data.heroImage = firebase.firestore.FieldValue.delete();
+      data.destinationInfo = firebase.firestore.FieldValue.delete();
+    }
+    try{
+      if(editingTripId){
+        await db.collection('trips').doc(editingTripId).update(data);
+        showToast('Viagem atualizada.');
+      } else {
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        data.vehicle = { enabled:false, company:'', totalPaid:0, gasExpense:0, daysUsed:0, notes:'' };
+        data.savingTips = [];
+        data.generalInfo = [];
+        data.packingList = [];
+        const ref = await db.collection('trips').add(data);
+        currentTripId = ref.id;
+        showToast('Viagem criada.');
+      }
+      closeModal('tripModalOverlay');
+    }catch(e){
+      console.error(e);
+      showToast('Erro ao salvar viagem.');
+    }
+  });
+
+  $('deleteTripBtn').addEventListener('click', async () => {
+    const t = currentTrip();
+    if(!t) return;
+    if(!confirm(`Excluir a viagem "${t.name}" e todas as suas atividades? Essa ação não pode ser desfeita.`)) return;
+    try{
+      const snap = await db.collection('activities').where('tripId','==', t.id).get();
+      const batch = db.batch();
+      snap.forEach(doc => batch.delete(doc.ref));
+      batch.delete(db.collection('trips').doc(t.id));
+      await batch.commit();
+      currentTripId = null;
+      showToast('Viagem excluída.');
+    }catch(e){
+      console.error(e);
+      showToast('Erro ao excluir viagem.');
+    }
+  });
+
+  /* ============================================================
+     LIVE LOOKUPS: destination photo + travel ideas (Wikipedia/Wikivoyage)
+  ============================================================ */
+  async function fetchJsonWithTimeout(url, ms){
+    const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const id = controller ? setTimeout(()=>controller.abort(), ms || 6000) : null;
+    try{
+      const res = await fetch(url, controller ? { signal: controller.signal } : undefined);
+      if(id) clearTimeout(id);
+      if(!res.ok) return null;
+      return await res.json();
+    }catch(e){
+      if(id) clearTimeout(id);
+      return null;
+    }
+  }
+  async function wikiSummary(domain, title){
+    return fetchJsonWithTimeout(`https://${domain}/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+  }
+  async function wikiSearchTitle(domain, query){
+    const data = await fetchJsonWithTimeout(`https://${domain}/w/rest.php/v1/search/page?q=${encodeURIComponent(query)}&limit=1`);
+    return (data && data.pages && data.pages[0]) ? data.pages[0].key : null;
+  }
+  async function resolveWikiSummary(domains, queries){
+    for(const domain of domains){
+      for(const query of queries){
+        let summary = await wikiSummary(domain, query);
+        if(!summary || summary.type === 'disambiguation'){
+          const title = await wikiSearchTitle(domain, query);
+          if(title){ summary = await wikiSummary(domain, title); }
+        }
+        if(summary && summary.type !== 'disambiguation') return { ...summary, _domain: domain };
+      }
+    }
+    return null;
+  }
+  function destinationQueries(trip){
+    const base = (trip.destination || trip.name || '').trim();
+    if(!base) return [];
+    const qs = [base];
+    if(!/brasil|brazil/i.test(base)) qs.push(base + ', Brasil');
+    return qs;
+  }
+
+  /* ===== Weather icons (plain inline SVG, no external assets) ===== */
+  function weatherCategory(code){
+    if(code === 0 || code === 1) return 'sun';
+    if([2,3,45,48].includes(code)) return 'cloud';
+    if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return 'rain';
+    if([71,73,75,77,85,86].includes(code)) return 'snow';
+    if([95,96,99].includes(code)) return 'storm';
+    return 'cloud';
+  }
+  function weatherIconSVG(code, size){
+    size = size || 22;
+    const cat = weatherCategory(code);
+    const common = `class="ficon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"`;
+    if(cat === 'sun'){
+      return `<svg ${common}><circle cx="12" cy="12" r="5" fill="#fff"/><g stroke="#fff" stroke-width="1.6" stroke-linecap="round"><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.5" y1="4.5" x2="6.2" y2="6.2"/><line x1="17.8" y1="17.8" x2="19.5" y2="19.5"/><line x1="4.5" y1="19.5" x2="6.2" y2="17.8"/><line x1="17.8" y1="6.2" x2="19.5" y2="4.5"/></g></svg>`;
+    }
+    if(cat === 'rain'){
+      return `<svg ${common}><path d="M7 14.5a4 4 0 0 1-.5-7.97A5 5 0 0 1 16.2 5.6 4.5 4.5 0 0 1 17.5 14.5H7Z" fill="#fff" opacity="0.92"/><g stroke="#fff" stroke-width="1.6" stroke-linecap="round"><line x1="9" y1="18" x2="8" y2="21"/><line x1="13" y1="18" x2="12" y2="21"/><line x1="17" y1="18" x2="16" y2="21"/></g></svg>`;
+    }
+    if(cat === 'storm'){
+      return `<svg ${common}><path d="M7 13.5a4 4 0 0 1-.5-7.97A5 5 0 0 1 16.2 4.6 4.5 4.5 0 0 1 17.5 13.5H7Z" fill="#fff" opacity="0.92"/><path d="M13 14l-3 5h2.4l-1.4 5 4.6-7h-2.4L15 14h-2Z" fill="#FFD166"/></svg>`;
+    }
+    if(cat === 'snow'){
+      return `<svg ${common}><path d="M7 13.5a4 4 0 0 1-.5-7.97A5 5 0 0 1 16.2 4.6 4.5 4.5 0 0 1 17.5 13.5H7Z" fill="#fff" opacity="0.92"/><g stroke="#fff" stroke-width="1.6" stroke-linecap="round"><line x1="9" y1="17.5" x2="9" y2="21.5"/><line x1="7.3" y1="18.7" x2="10.7" y2="20.3"/><line x1="10.7" y1="18.7" x2="7.3" y2="20.3"/><line x1="15" y1="17.5" x2="15" y2="21.5"/><line x1="13.3" y1="18.7" x2="16.7" y2="20.3"/><line x1="16.7" y1="18.7" x2="13.3" y2="20.3"/></g></svg>`;
+    }
+    return `<svg ${common}><path d="M7 17a4 4 0 0 1-.5-7.97A5 5 0 0 1 16.2 8.1 4.5 4.5 0 0 1 17.5 17H7Z" fill="#fff" opacity="0.92"/></svg>`;
+  }
+
+  /* ===== Geocoding + weather (Open-Meteo, free, no API key) ===== */
+  const geoFetchInFlight = new Set();
+  const weatherFetchInFlight = new Set();
+
+  async function ensureGeo(trip){
+    if(trip.geo !== undefined) return trip.geo;
+    if(geoFetchInFlight.has(trip.id)) return null;
+    geoFetchInFlight.add(trip.id);
+    try{
+      let geo = null;
+      for(const q of destinationQueries(trip)){
+        const data = await fetchJsonWithTimeout(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=pt&format=json`);
+        if(data && data.results && data.results[0]){
+          const r = data.results[0];
+          geo = { lat:r.latitude, lon:r.longitude, timezone:r.timezone || '' };
+          break;
+        }
+      }
+      await db.collection('trips').doc(trip.id).update({ geo: geo || {} });
+      return geo;
+    }catch(e){
+      console.error(e);
+      return null;
+    }finally{
+      geoFetchInFlight.delete(trip.id);
+    }
+  }
+
+  function renderWeatherNow(current){
+    const el = $('weatherNow');
+    if(!current || current.temp === undefined || current.temp === null){ el.innerHTML = ''; return; }
+    el.innerHTML = `${weatherIconSVG(current.code, 20)}<span>${Math.round(current.temp)}°C</span>`;
+  }
+
+  const DOW_SHORT_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  function renderForecast(daily){
+    const row = $('weatherForecastRow');
+    if(!daily || !daily.length){ row.innerHTML = ''; return; }
+    row.innerHTML = daily.map(d => {
+      const dt = parseISO(d.date);
+      const dow = dt ? DOW_SHORT_PT[dt.getDay()] : '';
+      return `<div class="forecast-card">
+        <div class="ftemp">${Math.round(d.max)}° / ${Math.round(d.min)}°</div>
+        ${weatherIconSVG(d.code, 28)}
+        <div class="fday">${dow}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function ensureWeather(trip){
+    const geo = trip.geo;
+    if(geo === undefined){
+      ensureGeo(trip).then(() => {}); // kicks off geo resolution; snapshot re-render will pick up weather next
+      renderWeatherNow(null);
+      renderForecast(null);
+      return;
+    }
+    if(!geo || !geo.lat){ renderWeatherNow(null); renderForecast(null); return; }
+    const cached = trip.weatherForecast;
+    if(cached){ renderForecast(cached.daily); renderWeatherNow(cached.current); }
+    else { renderWeatherNow(null); renderForecast(null); }
+    const stale = !cached || !cached.fetchedAt || (Date.now() - cached.fetchedAt > 3*60*60*1000);
+    if(!stale || weatherFetchInFlight.has(trip.id)) return;
+    weatherFetchInFlight.add(trip.id);
+    try{
+      const tz = encodeURIComponent(geo.timezone || 'auto');
+      const data = await fetchJsonWithTimeout(`https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&daily=temperature_2m_max,temperature_2m_min,weather_code&current=temperature_2m,weather_code&timezone=${tz}&forecast_days=7`);
+      if(data && data.daily && data.daily.time){
+        const codes = data.daily.weather_code || data.daily.weathercode || [];
+        const daily = data.daily.time.map((date,i) => ({ date, max:data.daily.temperature_2m_max[i], min:data.daily.temperature_2m_min[i], code:codes[i] }));
+        const current = data.current ? { temp:data.current.temperature_2m, code:(data.current.weather_code ?? data.current.weathercode) } : null;
+        await db.collection('trips').doc(trip.id).update({ weatherForecast: { daily, current, fetchedAt: Date.now() } });
+      }
+    }catch(e){
+      console.error(e);
+    }finally{
+      weatherFetchInFlight.delete(trip.id);
+    }
+  }
+
+  let clockInterval = null;
+  function startLocalClock(trip){
+    if(clockInterval) clearInterval(clockInterval);
+    function tick(){
+      const tz = trip.geo && trip.geo.timezone;
+      const now = new Date();
+      let text;
+      try{
+        text = tz ? now.toLocaleTimeString('pt-BR', { timeZone: tz, hour:'2-digit', minute:'2-digit' })
+                  : now.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+      }catch(e){
+        text = now.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+      }
+      $('localClock').textContent = text;
+    }
+    tick();
+    clockInterval = setInterval(tick, 15000);
+    if(trip.geo === undefined){
+      ensureGeo(trip).then(geo => {
+        if(geo && currentTrip() && currentTrip().id === trip.id){
+          trip.geo = geo;
+          tick();
+        }
+      });
+    }
+  }
+
+  function renderHeroNotification(){
+    const el = $('heroNotification');
+    if(!el) return;
+    const todayIso = toISO(new Date());
+    const upcoming = activities
+      .filter(a => !a.done && a.date >= todayIso)
+      .sort((a,b) => (a.date+(a.time||'')).localeCompare(b.date+(b.time||'')))[0];
+    if(!upcoming){ el.innerHTML = ''; return; }
+    el.innerHTML = `<span class="nbadge">Próximo</span><span>${escapeHtml(upcoming.name)}${upcoming.time ? ' · '+escapeHtml(upcoming.time) : ''}</span>`;
+  }
+
+  function applyHeroImage(url){
+    const img = $('tripHeroImg');
+    img.classList.remove('loaded');
+
+    if(!url){ img.removeAttribute('src'); return; }
+    img.onload = () => img.classList.add('loaded');
+    img.onerror = () => img.classList.remove('loaded');
+    img.src = url;
+  }
+
+  async function ensureHeroImage(trip){
+    if(trip.heroImage !== undefined){ applyHeroImage(trip.heroImage); return; }
+    if(heroFetchInFlight.has(trip.id)) return;
+    applyHeroImage('');
+    heroFetchInFlight.add(trip.id);
+    try{
+      const queries = destinationQueries(trip);
+      let url = '';
+      if(queries.length){
+        const summary = await resolveWikiSummary(['pt.wikipedia.org','en.wikipedia.org'], queries);
+        if(summary){
+          url = (summary.originalimage && summary.originalimage.source) || (summary.thumbnail && summary.thumbnail.source) || '';
+        }
+      }
+      await db.collection('trips').doc(trip.id).update({ heroImage: url });
+    }catch(e){
+      console.error(e);
+    }finally{
+      heroFetchInFlight.delete(trip.id);
+    }
+  }
+  $('refreshHeroBtn').addEventListener('click', async () => {
+    const t = currentTrip();
+    if(!t) return;
+    try{
+      await db.collection('trips').doc(t.id).update({ heroImage: firebase.firestore.FieldValue.delete() });
+      showToast('Buscando outra imagem...');
+    }catch(e){ console.error(e); showToast('Erro ao atualizar imagem.'); }
+  });
+
+  function renderDestinationIdeas(info){
+    const box = $('destinationIdeas');
+    box.classList.remove('loading','empty');
+    if(!info || !info.extract){
+      box.classList.add('hidden');
+      return;
+    }
+    box.classList.remove('hidden');
+    box.innerHTML = `
+      <div class="idea-label"><span>Sobre o destino</span><button class="text-btn" id="refreshIdeasBtn">Atualizar</button></div>
+      ${escapeHtml(info.extract)}
+      ${info.url ? `<div class="idea-src"><a href="${escapeHtml(info.url)}" target="_blank" rel="noopener">Ler mais</a></div>` : ''}
+    `;
+    $('refreshIdeasBtn').addEventListener('click', refreshIdeas);
+  }
+  async function refreshIdeas(){
+    const t = currentTrip();
+    if(!t) return;
+    try{ await db.collection('trips').doc(t.id).update({ destinationInfo: firebase.firestore.FieldValue.delete() }); }
+    catch(e){ console.error(e); }
+  }
+
+  async function ensureDestinationIdeas(trip){
+    if(trip.destinationInfo !== undefined){ renderDestinationIdeas(trip.destinationInfo); return; }
+    if(ideasFetchInFlight.has(trip.id)) return;
+    const box = $('destinationIdeas');
+    box.classList.remove('hidden','empty');
+    box.classList.add('loading');
+    box.textContent = 'Buscando informações sobre o destino...';
+    ideasFetchInFlight.add(trip.id);
+    try{
+      const queries = destinationQueries(trip);
+      let info = {};
+      if(queries.length){
+        const summary = await resolveWikiSummary(['pt.wikivoyage.org','en.wikivoyage.org'], queries);
+        if(summary && summary.extract){
+          const pageUrl = (summary.content_urls && summary.content_urls.desktop && summary.content_urls.desktop.page)
+            || `https://${summary._domain}/wiki/${encodeURIComponent(summary.titles ? summary.titles.canonical : (summary.title||''))}`;
+          info = { extract: summary.extract, url: pageUrl };
+        }
+      }
+      await db.collection('trips').doc(trip.id).update({ destinationInfo: info });
+    }catch(e){
+      console.error(e);
+    }finally{
+      ideasFetchInFlight.delete(trip.id);
+    }
+  }
+
+  function renderSuggestedTips(){
+    const t = currentTrip();
+    const box = $('suggestedTipsBox');
+    if(!t){ box.innerHTML = ''; return; }
+    const existing = new Set(t.savingTips || []);
+    const remaining = GENERIC_BUDGET_TIPS.map((tip, idx) => ({tip, idx})).filter(o => !existing.has(o.tip));
+    if(remaining.length === 0){ box.innerHTML = ''; return; }
+    box.innerHTML = '<div class="suggest-label">Ideias para economizar</div>' + remaining.map(o => `
+      <div class="suggest-row">
+        <span class="txt">${escapeHtml(o.tip)}</span>
+        <button class="text-btn" data-suggest-idx="${o.idx}">Adicionar</button>
+      </div>`).join('');
+    qsa('[data-suggest-idx]').forEach(btn => btn.addEventListener('click', () => addSuggestedTip(parseInt(btn.dataset.suggestIdx))));
+  }
+  async function addSuggestedTip(idx){
+    const t = currentTrip();
+    if(!t) return;
+    const tips = [...(t.savingTips||[]), GENERIC_BUDGET_TIPS[idx]];
+    try{ await db.collection('trips').doc(t.id).update({ savingTips: tips }); }
+    catch(e){ console.error(e); showToast('Erro ao adicionar dica.'); }
+  }
+
+  /* ============================================================
+     GENERAL INFO + PACKING LIST
+  ============================================================ */
+  function renderGeneralInfo(){
+    const t = currentTrip();
+    const list = $('generalInfoList');
+    const info = (t && t.generalInfo) || [];
+    if(info.length === 0){
+      list.innerHTML = '<li class="no-tickets" style="border:none;">Nenhuma informação cadastrada.</li>';
+      return;
+    }
+    list.innerHTML = info.map(i => `<li><span class="ilabel">${escapeHtml(i.label)}</span><span class="ivalue">${escapeHtml(i.value)}</span></li>`).join('');
+  }
+
+  function renderPackingList(){
+    const t = currentTrip();
+    const list = $('packingList');
+    const items = (t && t.packingList) || [];
+    if(items.length === 0){
+      list.innerHTML = '<li class="no-tickets" style="border:none;">Nenhum item na lista ainda.</li>';
+      return;
+    }
+    list.innerHTML = items.map((it,i) => `
+      <li>
+        <button class="stamp-check ${it.packed?'checked':''}" data-pack-toggle="${i}" title="Marcar como levado"></button>
+        <span class="txt ${it.packed?'packed':''}">${escapeHtml(it.item)}</span>
+        <button class="text-btn danger" data-pack-rm="${i}">Remover</button>
+      </li>`).join('');
+    qsa('[data-pack-toggle]').forEach(btn => btn.addEventListener('click', () => togglePackItem(parseInt(btn.dataset.packToggle))));
+    qsa('[data-pack-rm]').forEach(btn => btn.addEventListener('click', () => removePackItem(parseInt(btn.dataset.packRm))));
+  }
+
+  async function togglePackItem(index){
+    const t = currentTrip();
+    if(!t) return;
+    const items = [...(t.packingList||[])];
+    items[index] = { ...items[index], packed: !items[index].packed };
+    try{ await db.collection('trips').doc(t.id).update({ packingList: items }); }
+    catch(e){ console.error(e); showToast('Erro ao atualizar item.'); }
+  }
+  async function removePackItem(index){
+    const t = currentTrip();
+    if(!t) return;
+    const items = [...(t.packingList||[])];
+    items.splice(index,1);
+    try{ await db.collection('trips').doc(t.id).update({ packingList: items }); }
+    catch(e){ console.error(e); showToast('Erro ao remover item.'); }
+  }
+  $('addPackBtn').addEventListener('click', async () => {
+    const t = currentTrip();
+    if(!t) return;
+    const input = $('newPackInput');
+    const val = input.value.trim();
+    if(!val) return;
+    const items = [...(t.packingList||[]), { item: val, packed:false }];
+    try{
+      await db.collection('trips').doc(t.id).update({ packingList: items });
+      input.value = '';
+    }catch(e){ console.error(e); showToast('Erro ao adicionar item.'); }
+  });
+
+  /* ============================================================
+     ACTIVITIES
+  ============================================================ */
+  function listenActivities(tripId){
+    if(unsubActivities) unsubActivities();
+    unsubActivities = db.collection('activities').where('tripId','==', tripId).onSnapshot(snap => {
+      activities = [];
+      snap.forEach(doc => activities.push({ id: doc.id, ...doc.data() }));
+      activities.sort((a,b) => (a.date+ (a.time||'')).localeCompare(b.date+(b.time||'')));
+      renderCalendar();
+      renderActivitiesList();
+      renderExpenses();
+      renderHeroNotification();
+    }, err => {
+      console.error(err);
+      showConnError();
+      showToast('Erro ao carregar atividades.');
+    });
+  }
+
+  function renderActivitiesList(){
+    const root = $('activitiesList');
+    if(activities.length === 0){
+      root.innerHTML = '<p class="no-tickets">Nenhuma atividade cadastrada ainda.</p>';
+      return;
+    }
+    let html = '';
+    let lastDate = null;
+    activities.forEach(a => {
+      if(a.date !== lastDate){
+        html += `<div class="day-group-label">${formatDateBR(a.date)}</div>`;
+        lastDate = a.date;
+      }
+      html += renderActivityCard(a);
+    });
+    root.innerHTML = html;
+    wireActivityCardEvents();
+  }
+
+  function renderActivityCard(a){
+    const tickets = a.ticketOptions || [];
+    const hasLink = a.link && a.link.trim();
+    const hasPrice = a.price !== null && a.price !== undefined && a.price !== '';
+    const frags = [];
+    if(a.time) frags.push(escapeHtml(a.time));
+    if(hasPrice) frags.push(formatBRL(a.price));
+    if(hasLink) frags.push(`<a href="${escapeHtml(a.link)}" target="_blank" rel="noopener">Abrir local</a>`);
+    const metaHtml = frags.join('<span class="dot">·</span>');
+    return `
+    <div class="activity ${a.done ? 'is-done':''}" data-id="${a.id}">
+      <div class="activity-row">
+        <button class="stamp-check ${a.done?'checked':''}" data-action="toggle" data-id="${a.id}" title="Marcar como feito"></button>
+        <div class="activity-main">
+          <div class="activity-name">${escapeHtml(a.name)}</div>
+          ${metaHtml ? `<div class="activity-meta">${metaHtml}</div>` : ''}
+          ${tickets.length ? `<button class="ticket-toggle" data-action="tickets" data-id="${a.id}">Mostrar ingressos possíveis (${tickets.length})</button>` : ''}
+        </div>
+        <div class="activity-actions">
+          <button class="text-btn" data-action="edit" data-id="${a.id}">Editar</button>
+          <button class="text-btn danger" data-action="delete" data-id="${a.id}">Excluir</button>
+        </div>
+      </div>
+      <div class="ticket-panel" id="ticketPanel-${a.id}">
+        ${tickets.length ? `<table class="ticket-table">${tickets.map(tk => `<tr><td>${escapeHtml(tk.label)}</td><td class="tprice">${formatBRL(tk.price)}</td></tr>`).join('')}</table>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function wireActivityCardEvents(){
+    qsa('[data-action="toggle"]').forEach(btn => btn.addEventListener('click', () => toggleDone(btn.dataset.id)));
+    qsa('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => openActivityModal(activities.find(a=>a.id===btn.dataset.id))));
+    qsa('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteActivity(btn.dataset.id)));
+    qsa('[data-action="tickets"]').forEach(btn => btn.addEventListener('click', () => {
+      const panel = $('ticketPanel-' + btn.dataset.id);
+      const open = panel.classList.toggle('open');
+      btn.textContent = btn.textContent.replace(/^(Mostrar|Ocultar)/, open ? 'Ocultar' : 'Mostrar');
+    }));
+  }
+
+  async function toggleDone(id){
+    const a = activities.find(x => x.id === id);
+    if(!a) return;
+    try{ await db.collection('activities').doc(id).update({ done: !a.done }); }
+    catch(e){ console.error(e); showToast('Erro ao atualizar.'); }
+  }
+
+  async function deleteActivity(id){
+    if(!confirm('Excluir esta atividade?')) return;
+    try{ await db.collection('activities').doc(id).delete(); showToast('Atividade excluída.'); }
+    catch(e){ console.error(e); showToast('Erro ao excluir.'); }
+  }
+
+  function ticketRowHtml(label, price){
+    return `<div class="ticket-row">
+      <input type="text" class="tk-label" placeholder="Ex: Inteira, Meia, Promoção online..." value="${escapeHtml(label||'')}">
+      <input type="number" class="price-input tk-price" min="0" step="0.01" placeholder="0,00" value="${price ?? ''}">
+      <button type="button" class="text-btn danger rm">Remover</button>
+    </div>`;
+  }
+  function addTicketRow(label, price){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = ticketRowHtml(label, price);
+    const row = wrap.firstElementChild;
+    row.querySelector('.rm').addEventListener('click', () => row.remove());
+    $('ticketRows').appendChild(row);
+  }
+  $('addTicketBtn').addEventListener('click', () => addTicketRow('', ''));
+
+  function openActivityModal(activity, prefillDate){
+    editingActivityId = activity ? activity.id : null;
+    $('activityModalTitle').textContent = activity ? 'Editar atividade' : 'Nova atividade';
+    $('amName').value = activity ? activity.name||'' : '';
+    $('amDate').value = activity ? activity.date||'' : (prefillDate || '');
+    $('amTime').value = activity ? activity.time||'' : '';
+    $('amLink').value = activity ? activity.link||'' : '';
+    $('amPrice').value = activity && activity.price !== null && activity.price !== undefined ? activity.price : '';
+    $('ticketRows').innerHTML = '';
+    const tk = activity && activity.ticketOptions ? activity.ticketOptions : [];
+    if(tk.length){ tk.forEach(t => addTicketRow(t.label, t.price)); }
+    closeModal('dayModalOverlay');
+    openModal('activityModalOverlay');
+  }
+  $('addActivityBtn').addEventListener('click', () => openActivityModal(null));
+
+  $('saveActivityBtn').addEventListener('click', async () => {
+    const name = $('amName').value.trim();
+    const date = $('amDate').value;
+    if(!name || !date){ showToast('Preencha nome e data da atividade.'); return; }
+    const priceVal = $('amPrice').value;
+    const ticketOptions = qsa('.ticket-row').map(row => ({
+      label: row.querySelector('.tk-label').value.trim(),
+      price: parseFloat(row.querySelector('.tk-price').value) || 0
+    })).filter(t => t.label);
+
+    const data = {
+      tripId: currentTripId,
+      name, date,
+      time: $('amTime').value || '',
+      link: $('amLink').value.trim(),
+      price: priceVal === '' ? null : parseFloat(priceVal),
+      ticketOptions,
+    };
+    try{
+      if(editingActivityId){
+        await db.collection('activities').doc(editingActivityId).update(data);
+        showToast('Atividade atualizada.');
+      } else {
+        data.done = false;
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        await db.collection('activities').add(data);
+        showToast('Atividade adicionada.');
+      }
+      closeModal('activityModalOverlay');
+    }catch(e){
+      console.error(e);
+      showToast('Erro ao salvar atividade.');
+    }
+  });
+
+  /* ============================================================
+     CALENDAR
+  ============================================================ */
+  const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const DOW_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  $('calPrev').addEventListener('click', () => { calendarViewDate.setMonth(calendarViewDate.getMonth()-1); renderCalendar(); });
+  $('calNext').addEventListener('click', () => { calendarViewDate.setMonth(calendarViewDate.getMonth()+1); renderCalendar(); });
+
+  function renderCalendar(){
+    const year = calendarViewDate.getFullYear(), month = calendarViewDate.getMonth();
+    $('calLabel').textContent = `${MONTHS_PT[month]} ${year}`;
+    const grid = $('calGrid');
+    grid.innerHTML = DOW_PT.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+    const firstOfMonth = new Date(year, month, 1);
+    const startOffset = firstOfMonth.getDay();
+    const gridStart = new Date(year, month, 1 - startOffset);
+    const todayIso = toISO(new Date());
+    const t = currentTrip();
+
+    const actByDate = {};
+    activities.forEach(a => { (actByDate[a.date] = actByDate[a.date] || []).push(a); });
+
+    for(let i=0;i<42;i++){
+      const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate()+i);
+      const iso = toISO(cellDate);
+      const isOutside = cellDate.getMonth() !== month;
+      const isToday = iso === todayIso;
+      const inTripRange = t && t.startDate && t.endDate && iso >= t.startDate && iso <= t.endDate;
+      const dayActs = actByDate[iso] || [];
+
+      let dotsHtml = '';
+      if(dayActs.length){
+        const allDone = dayActs.every(a => a.done);
+        dotsHtml = `<span class="cal-dot ${allDone?'done':''}"></span>`;
+        if(dayActs.length > 1) dotsHtml += `<span class="cal-count">${dayActs.length}</span>`;
+      }
+
+      const cls = ['cal-day'];
+      if(isOutside) cls.push('outside');
+      if(isToday) cls.push('today');
+      if(inTripRange && !isOutside) cls.push('in-trip');
+
+      const cell = document.createElement('div');
+      cell.className = cls.join(' ');
+      cell.dataset.date = iso;
+      cell.innerHTML = `<span class="num">${cellDate.getDate()}</span><div class="cal-dots">${dotsHtml}</div>`;
+      cell.addEventListener('click', () => openDayModal(iso));
+      grid.appendChild(cell);
+    }
+  }
+
+  function openDayModal(iso){
+    dayModalDate = iso;
+    $('dayModalTitle').textContent = formatDateBR(iso);
+    const dayActs = activities.filter(a => a.date === iso);
+    const body = $('dayModalBody');
+    if(dayActs.length === 0){
+      body.innerHTML = '<p class="no-tickets">Nenhuma atividade neste dia ainda.</p>';
+    } else {
+      body.innerHTML = dayActs.map(renderActivityCard).join('');
+    }
+    openModal('dayModalOverlay');
+    wireActivityCardEvents();
+  }
+  $('dayAddActivityBtn').addEventListener('click', () => openActivityModal(null, dayModalDate));
+
+  /* ============================================================
+     VEHICLE
+  ============================================================ */
+  $('vehicleEnabled').addEventListener('change', (e) => {
+    $('vehicleFields').classList.toggle('hidden', !e.target.checked);
+  });
+  [$('vTotal'), $('vDays'), $('vGas')].forEach(el => el.addEventListener('input', renderVehicleSummary));
+
+  function renderVehicleSummary(){
+    const total = parseFloat($('vTotal').value) || 0;
+    const days = parseFloat($('vDays').value) || 0;
+    const gas = parseFloat($('vGas').value) || 0;
+    const perDay = days > 0 ? total/days : 0;
+    $('vehicleSummary').innerHTML = `
+      <div class="stat-pill"><div class="v">${formatBRL(perDay)}</div><div class="l">Custo por dia</div></div>
+      <div class="stat-pill"><div class="v">${formatBRL(total+gas)}</div><div class="l">Total veículo + gasolina</div></div>
+    `;
+  }
+
+  $('saveVehicleBtn').addEventListener('click', async () => {
+    const t = currentTrip();
+    if(!t) return;
+    const vehicle = {
+      enabled: $('vehicleEnabled').checked,
+      company: $('vCompany').value.trim(),
+      daysUsed: parseFloat($('vDays').value) || 0,
+      totalPaid: parseFloat($('vTotal').value) || 0,
+      gasExpense: parseFloat($('vGas').value) || 0,
+      notes: $('vNotes').value.trim(),
+    };
+    try{
+      await db.collection('trips').doc(t.id).update({ vehicle });
+      showToast('Locação de veículo salva.');
+      renderExpenses();
+    }catch(e){
+      console.error(e);
+      showToast('Erro ao salvar locação.');
+    }
+  });
+
+  /* ============================================================
+     EXPENSES SUMMARY
+  ============================================================ */
+  function renderExpenses(){
+    const t = currentTrip();
+    const body = $('expensesBody');
+    if(!t){ body.innerHTML = ''; return; }
+    const actTotal = activities.reduce((sum,a) => sum + (Number(a.price)||0), 0);
+    const v = t.vehicle || {};
+    const vehicleTotal = v.enabled ? (Number(v.totalPaid)||0) : 0;
+    const gasTotal = v.enabled ? (Number(v.gasExpense)||0) : 0;
+    const grand = actTotal + vehicleTotal + gasTotal;
+    const days = tripDayCount(t.startDate, t.endDate);
+    const avg = days && grand ? grand/days : 0;
+
+    function bar(label, value, color){
+      const pct = grand > 0 ? Math.max(2, (value/grand)*100) : 0;
+      return `<div class="exp-row">
+        <div class="lbl">${label}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${value>0?pct:0}%; background:${color}"></div></div>
+        <div class="amt">${formatBRL(value)}</div>
+      </div>`;
+    }
+
+    body.innerHTML = `
+      ${bar('Atividades', actTotal, 'var(--accent)')}
+      ${bar('Veículo', vehicleTotal, 'var(--ink)')}
+      ${bar('Gasolina', gasTotal, '#C9C4B4')}
+      <div class="exp-total">
+        <div>
+          <div class="t-label">Total geral da viagem</div>
+          ${days ? `<div class="exp-avg">media de ${formatBRL(avg)} por dia, em ${days} dia${days>1?'s':''}</div>` : ''}
+        </div>
+        <div class="t-val">${formatBRL(grand)}</div>
+      </div>
+    `;
+  }
+
+  /* ============================================================
+     SAVING TIPS
+  ============================================================ */
+  function renderTips(){
+    const t = currentTrip();
+    const list = $('tipsList');
+    const tips = (t && t.savingTips) || [];
+    renderSuggestedTips();
+    if(tips.length === 0){
+      list.innerHTML = '<p class="no-tickets">Nenhuma dica adicionada ainda.</p>';
+      return;
+    }
+    list.innerHTML = tips.map((tip, i) => `
+      <li><span class="bullet"></span><span class="txt">${escapeHtml(tip)}</span><button class="text-btn danger" data-tip-rm="${i}">Remover</button></li>
+    `).join('');
+    qsa('[data-tip-rm]').forEach(btn => btn.addEventListener('click', () => removeTip(parseInt(btn.dataset.tipRm))));
+  }
+
+  async function removeTip(index){
+    const t = currentTrip();
+    if(!t) return;
+    const tips = [...(t.savingTips||[])];
+    tips.splice(index,1);
+    try{ await db.collection('trips').doc(t.id).update({ savingTips: tips }); }
+    catch(e){ console.error(e); showToast('Erro ao remover dica.'); }
+  }
+
+  $('addTipBtn').addEventListener('click', async () => {
+    const t = currentTrip();
+    if(!t) return;
+    const input = $('newTipInput');
+    const val = input.value.trim();
+    if(!val) return;
+    const tips = [...(t.savingTips||[]), val];
+    try{
+      await db.collection('trips').doc(t.id).update({ savingTips: tips });
+      input.value = '';
+    }catch(e){ console.error(e); showToast('Erro ao adicionar dica.'); }
+  });
+
+  /* ============================================================
+     SEED: GRAMADO (full data from the original spreadsheet)
+  ============================================================ */
+  async function seedGramadoTrip(){
+    try{
+      const tripData = {
+        name: 'Gramado, RS', destination: 'Gramado, Rio Grande do Sul',
+        startDate: '2026-06-27', endDate: '2026-07-03', hotel: 'Hotel Alpestre',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        vehicle: { enabled:false, company:'', totalPaid:0, gasExpense:0, daysUsed:0, notes:'' },
+        savingTips: [
+          'Compre ingressos do Snowland e Acquamotion online com antecedência - evita filas e às vezes sai mais barato.',
+          'Lago Negro e Praça das Etnias são gratuitos - ajudam a equilibrar dias com parques pagos.',
+          'Faça reservas com antecedência em restaurantes concorridos: 1835 Carne e Brasa, Ocre e Vinolab.',
+          'Leve dinheiro em espécie - nem todo lugar pequeno aceita cartão.',
+          'Compare aluguel de carro com transfer - em grupo, o carro costuma compensar mais.',
+          'Aproveite o café da manhã do hotel para economizar uma refeição por dia.',
+          'Compre chocolate em lojas especializadas de fábrica - é mais barato e de boa qualidade.',
+          'Em Canela, prefira ir num domingo para evitar multidões e aproveitar melhor o tempo.',
+        ],
+        generalInfo: [
+          { label:'Horário de chegada', value:'Aproximadamente 18h' },
+          { label:'Clima', value:'Frio, ameno (10°C a 18°C) - levar casaco' },
+          { label:'Moeda', value:'Real (R$)' },
+          { label:'Idioma', value:'Português' },
+          { label:'Melhor época', value:'Inverno (junho a agosto) - clima frio e agradável' },
+        ],
+        packingList: [
+          { item:'Casaco, suéter e calça comprida', packed:false },
+          { item:'Sapatos confortáveis para caminhada', packed:false },
+          { item:'Chapéu, luvas e lenço para o frio', packed:false },
+          { item:'Câmera ou smartphone com espaço de armazenamento', packed:false },
+          { item:'RG ou CPF, cartão de crédito e dinheiro em espécie', packed:false },
+          { item:'Protetor solar (o sol reflete na neve mesmo no inverno)', packed:false },
+          { item:'Remédios pessoais e analgésicos', packed:false },
+          { item:'Carregador de celular e power bank', packed:false },
+        ],
+      };
+      const tripRef = await db.collection('trips').add(tripData);
+      const tripId = tripRef.id;
+
+      const acts = [
+        { name:'Chegada ao Hotel Alpestre', date:'2026-06-27', time:'18:00', price:null, ticketOptions:[] },
+        { name:'Jantar no hotel ou local próximo', date:'2026-06-27', time:'20:00', price:null, ticketOptions:[] },
+
+        { name:'Snowland', date:'2026-06-28', time:'09:00', price:125, ticketOptions:[{label:'Preço mínimo',price:100},{label:'Preço máximo',price:150}] },
+        { name:'Lago Negro', date:'2026-06-28', time:'14:00', price:0, ticketOptions:[{label:'Entrada',price:0}] },
+        { name:'Praça das Etnias', date:'2026-06-28', time:'16:00', price:0, ticketOptions:[{label:'Entrada',price:0}] },
+        { name:'Opção alternativa: Mini Mundo', date:'2026-06-28', time:'', price:60, ticketOptions:[{label:'Preço mínimo',price:50},{label:'Preço máximo',price:70}] },
+        { name:'Opção alternativa: Cascata do Caracol', date:'2026-06-28', time:'', price:35, ticketOptions:[{label:'Preço mínimo',price:30},{label:'Preço máximo',price:40}] },
+        { name:'Almoço: Galeto di Paolo', date:'2026-06-28', time:'12:30', price:75, ticketOptions:[{label:'Preço mínimo',price:50},{label:'Preço máximo',price:100}] },
+        { name:'Jantar: 1835 Carne e Brasa', date:'2026-06-28', time:'19:30', price:150, ticketOptions:[{label:'Preço mínimo',price:120},{label:'Preço máximo',price:180}] },
+
+        { name:'Acquamotion', date:'2026-06-29', time:'09:00', price:100, ticketOptions:[{label:'Preço mínimo',price:80},{label:'Preço máximo',price:120}] },
+        { name:'Opção alternativa: Snowland', date:'2026-06-29', time:'', price:125, ticketOptions:[{label:'Preço mínimo',price:100},{label:'Preço máximo',price:150}] },
+        { name:'Opção alternativa: Terra Mágica Florybal', date:'2026-06-29', time:'', price:70, ticketOptions:[{label:'Preço mínimo',price:60},{label:'Preço máximo',price:80}] },
+        { name:'Opção alternativa: Alpen Park', date:'2026-06-29', time:'', price:85, ticketOptions:[{label:'Preço mínimo',price:70},{label:'Preço máximo',price:100}] },
+        { name:'Almoço: Fondue', date:'2026-06-29', time:'12:30', price:90, ticketOptions:[{label:'Preço mínimo',price:60},{label:'Preço máximo',price:120}] },
+        { name:'Jantar: Giostra', date:'2026-06-29', time:'19:30', price:115, ticketOptions:[{label:'Preço mínimo',price:80},{label:'Preço máximo',price:150}] },
+
+        { name:'Catedral de Pedra (Canela)', date:'2026-06-30', time:'10:00', price:25, ticketOptions:[{label:'Preço mínimo',price:20},{label:'Preço máximo',price:30}] },
+        { name:'Parque do Caracol (Canela)', date:'2026-06-30', time:'12:00', price:40, ticketOptions:[{label:'Preço mínimo',price:30},{label:'Preço máximo',price:50}] },
+        { name:'Skyglass', date:'2026-06-30', time:'16:00', price:26.5, ticketOptions:[{label:'Promoção',price:26.5}] },
+        { name:'Opção alternativa: Bondinhos Aéreos (Canela)', date:'2026-06-30', time:'', price:50, ticketOptions:[{label:'Preço mínimo',price:40},{label:'Preço máximo',price:60}] },
+        { name:'Opção alternativa: Mundo Gelado (Canela)', date:'2026-06-30', time:'', price:65, ticketOptions:[{label:'Preço mínimo',price:50},{label:'Preço máximo',price:80}] },
+        { name:'Almoço: Garfo e Bombacha (com show)', date:'2026-06-30', time:'12:30', price:125, ticketOptions:[{label:'Preço mínimo',price:100},{label:'Preço máximo',price:150}] },
+        { name:'Jantar: Magnólia', date:'2026-06-30', time:'19:30', price:115, ticketOptions:[{label:'Preço mínimo',price:80},{label:'Preço máximo',price:150}] },
+
+        { name:'Vinícola Jolimont', date:'2026-07-01', time:'10:00', price:120, ticketOptions:[{label:'Degustação básica',price:89},{label:'Degustação completa',price:150}] },
+        { name:'Olivas de Gramado', date:'2026-07-01', time:'14:00', price:null, ticketOptions:[] },
+        { name:'Opção alternativa: Cristais de Gramado', date:'2026-07-01', time:'', price:null, ticketOptions:[] },
+        { name:'Opção alternativa: Museu Egípcio', date:'2026-07-01', time:'', price:null, ticketOptions:[] },
+        { name:'Almoço: Vinolab', date:'2026-07-01', time:'12:30', price:140, ticketOptions:[{label:'Preço mínimo',price:100},{label:'Preço máximo',price:180}] },
+        { name:'Jantar: El Cordero', date:'2026-07-01', time:'19:30', price:125, ticketOptions:[{label:'Preço mínimo',price:100},{label:'Preço máximo',price:150}] },
+
+        { name:'Hollywood Dream Cars', date:'2026-07-02', time:'10:00', price:null, ticketOptions:[] },
+        { name:'Motor Show', date:'2026-07-02', time:'13:00', price:null, ticketOptions:[] },
+        { name:'Opção alternativa: Supercarros', date:'2026-07-02', time:'', price:null, ticketOptions:[] },
+        { name:'Opção alternativa: American Old Trucks', date:'2026-07-02', time:'', price:null, ticketOptions:[] },
+        { name:'Almoço: Pastasciutta', date:'2026-07-02', time:'12:30', price:90, ticketOptions:[{label:'Preço mínimo',price:60},{label:'Preço máximo',price:120}] },
+        { name:'Jantar: Casa da Velha Bruxa (chocolate)', date:'2026-07-02', time:'19:30', price:55, ticketOptions:[{label:'Preço mínimo',price:30},{label:'Preço máximo',price:80}] },
+
+        { name:'Café da manhã no hotel', date:'2026-07-03', time:'08:00', price:null, ticketOptions:[] },
+        { name:'Últimas compras de lembranças', date:'2026-07-03', time:'09:00', price:null, ticketOptions:[] },
+        { name:'Saída do hotel', date:'2026-07-03', time:'11:00', price:null, ticketOptions:[] },
+      ];
+
+      const batch = db.batch();
+      acts.forEach(a => {
+        const ref = db.collection('activities').doc();
+        batch.set(ref, { tripId, done:false, link:'', createdAt: firebase.firestore.FieldValue.serverTimestamp(), ...a });
+      });
+      await batch.commit();
+      currentTripId = tripId;
+      showToast('Exemplo de Gramado carregado com todos os dados do roteiro.');
+      return true;
+    }catch(e){
+      console.error(e);
+      showConnError();
+      showToast('Erro ao carregar exemplo. Confira a configuração do Firestore.');
+      return false;
+    }
+  }
+  $('seedBtn').addEventListener('click', () => {
+    if(confirm('Isso vai criar uma viagem de exemplo "Gramado, RS" com o cronograma completo. Continuar?')){
+      seedGramadoTrip();
+    }
+  });
+
+  /* ============================================================
+     BOOT
+  ============================================================ */
+  tryAutoConnect();
+})();
+</script>
+</body>
+</html>
