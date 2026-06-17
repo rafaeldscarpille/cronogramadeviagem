@@ -232,6 +232,17 @@
   .field input, .field textarea, .field select{width:100%; padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);}
   .field input.input-error, .field textarea.input-error{border-color:var(--danger);}
   .field-error{font-size:12px; color:var(--danger); margin-top:5px;}
+  .verify-row{display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;}
+  .confirmed-badge{font-size:12px; color:var(--success); font-weight:600;}
+  .candidates-list{margin-top:10px; border:1px solid var(--line); border-radius:8px; overflow:hidden;}
+  .candidate-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; text-align:left;
+    background:var(--paper); border:none; border-bottom:1px solid var(--line); padding:10px 12px;
+    font-size:13px; color:var(--ink); cursor:pointer;
+  }
+  .candidate-row:last-child{border-bottom:none;}
+  .candidate-row:hover{background:var(--accent-soft); color:var(--accent-dark);}
+  .candidate-row .cand-meta{font-size:11.5px; color:var(--muted); flex-shrink:0;}
   .field input:focus, .field textarea:focus, .field select:focus{outline:none; border-color:var(--accent);}
   .vehicle-summary{margin-top:14px; display:flex; gap:14px; flex-wrap:wrap;}
   .stat-pill{background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 16px;}
@@ -477,7 +488,15 @@
     <div class="modal-head"><h3 id="tripModalTitle">Nova viagem</h3><button class="text-btn" data-close="tripModalOverlay">Fechar</button></div>
     <div class="modal-body">
       <div class="field"><label>Nome da viagem *</label><input type="text" id="tmName" placeholder="Ex: Gramado, RS"></div>
-      <div class="field"><label>Destino</label><input type="text" id="tmDestination" placeholder="Ex: Gramado, Rio Grande do Sul"></div>
+      <div class="field">
+        <label>Destino</label>
+        <input type="text" id="tmDestination" placeholder="Ex: Gramado, Rio Grande do Sul">
+        <div class="verify-row">
+          <button type="button" class="btn btn-ghost btn-sm" id="verifyDestinationBtn">Verificar localização</button>
+          <span class="confirmed-badge hidden" id="destinationConfirmedBadge"></span>
+        </div>
+        <div class="candidates-list hidden" id="destinationCandidates"></div>
+      </div>
       <div class="form-grid">
         <div class="field"><label>Data de início *</label><input type="date" id="tmStart"></div>
         <div class="field"><label>Data de fim *</label><input type="date" id="tmEnd"></div>
@@ -851,6 +870,15 @@ service cloud.firestore {
   }
 
   let editingTripId = null;
+  let confirmedGeo = null;
+  function resetDestinationConfirmation(){
+    confirmedGeo = null;
+    $('destinationConfirmedBadge').classList.add('hidden');
+    $('destinationCandidates').classList.add('hidden');
+    $('destinationCandidates').innerHTML = '';
+  }
+  $('tmDestination').addEventListener('input', resetDestinationConfirmation);
+
   function openTripModal(trip){
     editingTripId = trip ? trip.id : null;
     $('tripModalTitle').textContent = trip ? 'Editar viagem' : 'Nova viagem';
@@ -859,11 +887,57 @@ service cloud.firestore {
     $('tmStart').value = trip ? (trip.startDate||'') : '';
     $('tmEnd').value = trip ? (trip.endDate||'') : '';
     $('tmHotel').value = trip ? (trip.hotel||'') : '';
+    resetDestinationConfirmation();
+    if(trip && trip.geo && trip.geo.lat){
+      confirmedGeo = trip.geo;
+      $('destinationConfirmedBadge').classList.remove('hidden');
+      $('destinationConfirmedBadge').textContent = 'Localização já confirmada anteriormente';
+    }
     openModal('tripModalOverlay');
   }
   $('newTripBtn').addEventListener('click', () => openTripModal(null));
   $('emptyNewTripBtn').addEventListener('click', () => openTripModal(null));
   $('editTripBtn').addEventListener('click', () => openTripModal(currentTrip()));
+
+  async function geocodeCandidates(query){
+    const data = await fetchJsonWithTimeout(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=pt&format=json`);
+    return (data && data.results) ? data.results : [];
+  }
+  function candidateLabel(r){
+    return [r.name, r.admin1, r.country].filter(Boolean).join(', ');
+  }
+  function renderDestinationCandidates(list){
+    const box = $('destinationCandidates');
+    box.classList.remove('hidden');
+    if(!list.length){
+      box.innerHTML = '<p class="no-tickets" style="padding:10px 12px;">Não encontrei nada com esse nome. Tente ser mais específico (ex: adicione o estado).</p>';
+      return;
+    }
+    box.innerHTML = list.map((r,i) => {
+      const pop = r.population ? `pop. aprox. ${Number(r.population).toLocaleString('pt-BR')}` : '';
+      return `<button type="button" class="candidate-row" data-cand="${i}"><span>${escapeHtml(candidateLabel(r))}</span><span class="cand-meta">${escapeHtml(pop)}</span></button>`;
+    }).join('');
+    qsa('.candidate-row', box).forEach((btn,i) => btn.addEventListener('click', () => selectDestinationCandidate(list[i])));
+  }
+  function selectDestinationCandidate(r){
+    confirmedGeo = { lat:r.latitude, lon:r.longitude, timezone:r.timezone || '' };
+    $('tmDestination').value = candidateLabel(r);
+    $('destinationCandidates').classList.add('hidden');
+    $('destinationCandidates').innerHTML = '';
+    $('destinationConfirmedBadge').classList.remove('hidden');
+    $('destinationConfirmedBadge').textContent = 'Confirmado: ' + candidateLabel(r);
+  }
+  $('verifyDestinationBtn').addEventListener('click', async () => {
+    const query = $('tmDestination').value.trim() || $('tmName').value.trim();
+    if(!query){ showToast('Digite um destino para verificar.'); return; }
+    const btn = $('verifyDestinationBtn');
+    btn.disabled = true;
+    btn.textContent = 'Buscando...';
+    const list = await geocodeCandidates(query);
+    btn.disabled = false;
+    btn.textContent = 'Verificar localização';
+    renderDestinationCandidates(list);
+  });
 
   $('saveTripBtn').addEventListener('click', async () => {
     const name = $('tmName').value.trim();
@@ -879,13 +953,19 @@ service cloud.firestore {
       name, destination: $('tmDestination').value.trim(),
       startDate: start, endDate: end, hotel: $('tmHotel').value.trim(),
     };
-    if(destinationChanged){
-      data.heroImage = firebase.firestore.FieldValue.delete();
-      data.destinationInfo = firebase.firestore.FieldValue.delete();
-    }
+    if(confirmedGeo){ data.geo = confirmedGeo; }
     try{
       if(editingTripId){
-        await db.collection('trips').doc(editingTripId).update(data);
+        const updateData = { ...data };
+        if(destinationChanged){
+          updateData.heroImage = firebase.firestore.FieldValue.delete();
+          updateData.destinationInfo = firebase.firestore.FieldValue.delete();
+          updateData.suggestions = firebase.firestore.FieldValue.delete();
+        }
+        if(confirmedGeo){
+          updateData.weatherForecast = firebase.firestore.FieldValue.delete();
+        }
+        await db.collection('trips').doc(editingTripId).update(updateData);
         showToast('Viagem atualizada.');
       } else {
         data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
